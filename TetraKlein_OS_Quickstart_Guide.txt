@@ -1,0 +1,95 @@
+
+============================
+TetraKlein OS
+Quickstart Deployment Guide v1.0
+============================
+
+Classification: FIELD USE
+Version: 1.0
+Release Date: April 2025
+
+----------------------------
+MISSION PROFILE
+----------------------------
+Deploy a RAM-only, sovereign cryptographic environment for secure field operations, ensuring zero forensic trace after extraction.
+
+----------------------------
+SYSTEM REQUIREMENTS
+----------------------------
+- OS: Ubuntu 24.04+, Fedora 39+, Arch Linux
+- RAM: 4 GB minimum (8 GB recommended)
+- Storage: 2 GB (for temporary container build only)
+- Podman installed
+
+----------------------------
+INSTALLATION STEPS
+----------------------------
+
+1. Install Podman
+------------------
+Ubuntu:
+  sudo apt update && sudo apt install -y podman
+
+Fedora:
+  sudo dnf install -y podman
+
+Arch:
+  sudo pacman -S podman
+
+2. Extract and Build TetraKlein
+-------------------------------
+  tar -xvzf tetraklein_os_v1.0.tar.gz
+  cd tetraklein_os_build
+  podman build -t tetraklein-os .
+
+----------------------------
+DEPLOYMENT COMMANDS
+----------------------------
+
+1. Launch the System:
+----------------------
+  ./deploy_tetraklein.sh
+
+2. Access the Field Dashboard:
+------------------------------
+  https://127.0.0.1:8080
+(accept Sovereign HTTPS warning)
+
+----------------------------
+EMERGENCY RAM PURGE
+----------------------------
+
+In critical situations, run:
+  ./purge_tetraklein.sh
+
+Effect:
+- Instantly stop all operations
+- RAM securely scrubbed
+- No traces remain
+
+----------------------------
+KEY QUICK COMMANDS
+----------------------------
+| Action             | Command                          |
+|--------------------|----------------------------------|
+| Build Image        | podman build -t tetraklein-os .  |
+| Deploy TetraKlein  | ./deploy_tetraklein.sh           |
+| Access Dashboard   | https://127.0.0.1:8080           |
+| Emergency Purge    | ./purge_tetraklein.sh            |
+| Rotate Certificates| ./tls_gen.sh                     |
+
+----------------------------
+FIELD REMINDERS
+----------------------------
+- TetraKlein runs ENTIRELY in RAM.
+- No internal disk writes by default.
+- Securely purge memory after every mission.
+
+----------------------------
+OPERATIONAL CODE
+----------------------------
+"When the USB leaves the port, the Nation leaves no shadow."
+
+============================
+END OF QUICKSTART GUIDE
+============================
