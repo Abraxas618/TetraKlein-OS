@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TOP SECRET - TETRAKLEIN TERMINAL DASHBOARD</title>
+    <style>
+        :root {
+            --terminal-green: #00ff00;
+            --terminal-dark: #001100;
+        }
+        
+        body {
+            background: #000;
+            color: var(--terminal-green);
+            font-family: 'VT323', monospace;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .terminal {
+            width: 800px;
+            height: 600px;
+            background: #000;
+            border: 2px solid var(--terminal-green);
+            box-shadow: 0 0 20px var(--terminal-green);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .screen {
+            padding: 20px;
+            height: 100%;
+            position: relative;
+        }
+
+        .scanlines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.1),
+                rgba(0, 0, 0, 0.1) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 0 0 5px var(--terminal-green);
+        }
+
+        .terminal-output {
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid var(--terminal-green);
+        }
+
+        .command-line {
+            display: flex;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .prompt {
+            margin-right: 10px;
+        }
+
+        #command-input {
+            background: transparent;
+            border: none;
+            color: var(--terminal-green);
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            width: 100%;
+            padding: 5px;
+            outline: none;
+        }
+
+        .cursor {
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        .status {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            font-size: 14px;
+            text-align: center;
+        }
+    </style>
+    <script src="mesh/core.js"></script>
+    <script src="mesh/network.js"></script>
+    <script src="mesh/commands.js"></script>
+</head>
+<body>
+    <div class="terminal">
+        <div class="screen">
+            <div class="scanlines"></div>
+            <div class="header">
+                <pre>
+████████╗███████╗████████╗██████╗ ██╗  ██╗██╗  ██╗██╗     ███████╗██╗███╗   ██╗
+╚══██╔══╝██╔════╝╚══██╔══╝██╔══██╗██║ ██╔╝██║ ██╔╝██║     ██╔════╝██║████╗  ██║
+   ██║   █████╗     ██║   ██████╔╝█████╔╝ █████╔╝ ██║     █████╗  ██║██╔██╗ ██║
+   ██║   ██╔══╝     ██║   ██╔══██╗██╔═██╗ ██╔═██╗ ██║     ██╔══╝  ██║██║╚██╗██║
+   ██║   ███████╗   ██║   ██║  ██║██║  ██╗██║  ██╗███████╗███████╗██║██║ ╚████║
+   ╚═╝   ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝╚═╝╚═╝  ╚═══╝
+                </pre>
+                <p>TOP SECRET - TETRAKLEIN TERMINAL DASHBOARD</p>
+                <p>CLASSIFIED LEVEL: BEYOND TOP SECRET</p>
+            </div>
+            
+            <div class="terminal-output" id="output">
+                <p>> SYSTEM INITIALIZATION COMPLETE</p>
+                <p>> WELCOME TO TETRAKLEIN OS</p>
+                <p>> TYPE 'HELP' FOR AVAILABLE COMMANDS</p>
+            </div>
+
+            <div class="command-line">
+                <span class="prompt">></span>
+                <input type="text" id="command-input" autocomplete="off" autofocus>
+            </div>
+
+            <div class="status">
+                <p>> SYSTEM STATUS: <span id="sysStatus">OPERATIONAL</span></p>
+                <p>> SECURITY LEVEL: <span id="secStatus">MAXIMUM</span></p>
+                <p>> ACCESS: <span id="accessStatus">GRANTED</span></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const output = document.getElementById('output');
+        const commandInput = document.getElementById('command-input');
+
+        const commands = {
+            'help': () => {
+                return `
+Available Commands:
+- HELP: Display this help message
+- CLEAR: Clear the terminal
+- STATUS: Display system status
+- LOGOUT: End current session
+- TIME: Display current time
+- DATE: Display current date
+- MESH: Display mesh network status
+- NODES: List connected nodes
+- CONNECT <nodeId>: Connect to a node
+- CHAT <nodeId> <message>: Send message to node
+- HISTORY <nodeId>: View chat history with node
+                `;
+            },
+            'clear': () => {
+                output.innerHTML = '';
+                return '';
+            },
+            'status': () => {
+                return `
+System Status Report:
+- CPU: 100%
+- Memory: 64MB
+- Storage: 1GB
+- Network: SECURE
+- Security: MAXIMUM
+                `;
+            },
+            'time': () => {
+                return new Date().toLocaleTimeString();
+            },
+            'date': () => {
+                return new Date().toLocaleDateString();
+            },
+            'logout': () => {
+                window.location.href = '/';
+                return '';
+            },
+            ...meshCommands
+        };
+
+        commandInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const input = this.value.trim();
+                const [command, ...args] = input.split(' ');
+                this.value = '';
+                
+                // Add command to output
+                output.innerHTML += `<p>> ${input}</p>`;
+                
+                // Execute command
+                if (commands[command]) {
+                    const result = commands[command](args);
+                    if (result) {
+                        output.innerHTML += `<p>${result}</p>`;
+                    }
+                } else {
+                    output.innerHTML += `<p>ERROR: Command not found</p>`;
+                }
+                
+                // Scroll to bottom
+                output.scrollTop = output.scrollHeight;
+            }
+        });
+
+        // Add cursor blink to input
+        commandInput.addEventListener('focus', function() {
+            this.classList.add('cursor');
+        });
+        
+        commandInput.addEventListener('blur', function() {
+            this.classList.remove('cursor');
+        });
+    </script>
+</body>
+</html> 

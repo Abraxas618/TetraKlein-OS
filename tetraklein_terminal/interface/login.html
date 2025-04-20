@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TETRAKLEIN OS - SOVEREIGN LOGIN</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+            overflow: hidden;
+        }
+        .terminal {
+            width: 800px;
+            height: 600px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .screen {
+            background-color: rgba(0, 0, 0, 0.9);
+            border: 2px solid #00ff00;
+            padding: 20px;
+            height: 100%;
+            overflow-y: auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            animation: flicker 0.15s infinite;
+        }
+        .login-form {
+            margin-top: 50px;
+        }
+        input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid #00ff00;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            margin: 10px 0;
+            padding: 5px;
+            width: 300px;
+        }
+        input:focus {
+            outline: none;
+        }
+        .status {
+            margin-top: 20px;
+            font-size: 12px;
+        }
+        .blink {
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+        @keyframes flicker {
+            0% { opacity: 1; }
+            50% { opacity: 0.95; }
+            100% { opacity: 1; }
+        }
+        .typing {
+            animation: typing 0.1s steps(40, end);
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal">
+        <div class="screen">
+            <div class="header">
+                <pre>
+████████╗███████╗████████╗██████╗ ██╗  ██╗██╗  ██╗██╗     ███████╗██╗███╗   ██╗
+╚══██╔══╝██╔════╝╚══██╔══╝██╔══██╗██║ ██╔╝██║ ██╔╝██║     ██╔════╝██║████╗  ██║
+   ██║   █████╗     ██║   ██████╔╝█████╔╝ █████╔╝ ██║     █████╗  ██║██╔██╗ ██║
+   ██║   ██╔══╝     ██║   ██╔══██╗██╔═██╗ ██╔═██╗ ██║     ██╔══╝  ██║██║╚██╗██║
+   ██║   ███████╗   ██║   ██║  ██║██║  ██╗██║  ██╗███████╗███████╗██║██║ ╚████║
+   ╚═╝   ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝╚═╝╚═╝  ╚═══╝
+                </pre>
+                <p>SOVEREIGN FIELD TERMINAL v1.0</p>
+                <p>COLD WAR EDITION</p>
+            </div>
+            
+            <div class="login-form">
+                <p>> ENTER SOVEREIGN CREDENTIALS</p>
+                <form id="loginForm" onsubmit="return handleLogin(event)">
+                    <p>USERNAME: <input type="text" id="username" autocomplete="off" required></p>
+                    <p>PASSWORD: <input type="password" id="password" autocomplete="off" required></p>
+                    <p><input type="submit" value="AUTHENTICATE" style="cursor: pointer;"></p>
+                </form>
+            </div>
+
+            <div class="status">
+                <p>> SYSTEM STATUS: <span id="sysStatus">READY</span></p>
+                <p>> TEMPORAL STABILITY: <span id="tempStatus">CONFIRMED</span></p>
+                <p>> SOVEREIGNTY: <span id="sovStatus">MAINTAINED</span></p>
+                <p>> ENTRPY LEVEL: <span id="entStatus">SUFFICIENT</span></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function handleLogin(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            // Simulate authentication delay
+            document.getElementById('sysStatus').textContent = 'AUTHENTICATING...';
+            
+            setTimeout(() => {
+                // In a real implementation, this would be a secure API call
+                if (username && password) {
+                    window.location.href = '/dashboard';
+                } else {
+                    document.getElementById('sysStatus').textContent = 'AUTHENTICATION FAILED';
+                }
+            }, 2000);
+            
+            return false;
+        }
+
+        // Simulate terminal typing effect
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('keypress', function(e) {
+                this.classList.add('typing');
+                setTimeout(() => this.classList.remove('typing'), 100);
+            });
+        });
+    </script>
+</body>
+</html> 
