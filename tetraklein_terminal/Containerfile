@@ -1,28 +1,22 @@
-FROM nginx:alpine
+FROM node:20-alpine
 
-# Create directory for terminal files
-RUN mkdir -p /usr/share/nginx/html
+# Set working directory
+WORKDIR /app
 
-# Copy the terminal interface files
-COPY public/index.html /usr/share/nginx/html/
-COPY public/mesh/ /usr/share/nginx/html/mesh/
+# Copy only package.json and package-lock.json first
+COPY package*.json ./
 
-# Configure nginx
-RUN echo "server { \
-    listen 8080; \
-    server_name localhost; \
-    root /usr/share/nginx/html; \
-    index index.html; \
-    location / { \
-        try_files \$uri \$uri/ /index.html; \
-    } \
-    location /mesh/ { \
-        try_files \$uri \$uri/ /mesh/index.html; \
-    } \
-}" > /etc/nginx/conf.d/default.conf
+# Install dependencies
+RUN npm install
 
-# Expose only localhost port
-EXPOSE 8080
+# Copy full source code
+COPY . .
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"] 
+# Build inside container
+RUN npm run build
+
+# Install a tiny static server
+RUN npm install -g serve
+
+# Default command to serve the built files
+CMD ["serve", "-s", "dist", "-l", "8080"]
