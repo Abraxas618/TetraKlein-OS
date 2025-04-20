@@ -1,14 +1,16 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>TetraKlein-OS Field Terminal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TetraKlein-OS Terminal</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap">
+    <link rel="stylesheet" href="css/terminal.css">
     <!-- Security Headers -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="X-Frame-Options" content="DENY">
     <meta http-equiv="X-XSS-Protection" content="1; mode=block">
     <meta http-equiv="Referrer-Policy" content="no-referrer">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         /* Base styles */
         body {
@@ -209,35 +211,22 @@
     </style>
 </head>
 <body>
-    <div class="terminal">
-        <div class="header">
-            <h1 class="flicker">TetraKlein-OS Field Terminal</h1>
-            <p>CLASSIFIED: TOP SECRET</p>
-        </div>
-        <div class="content">
-            <div id="output">
-                Welcome to TetraKlein-OS Field Terminal
-                Cold War Deployment Scenario Active
-                Type 'help' for available commands
+    <div class="terminal-container">
+        <div class="terminal-header">
+            <div class="terminal-controls">
+                <div class="control-btn control-close"></div>
+                <div class="control-btn control-minimize"></div>
+                <div class="control-btn control-maximize"></div>
             </div>
-            <div class="command-line">
-                <span id="prompt">></span>
-                <input type="text" id="input" autofocus>
-                <span id="cursor"></span>
-            </div>
+            <div class="terminal-title">TetraKlein-OS v1.0</div>
         </div>
-        <div class="status">
-            STATUS: <span id="connection-status">CONNECTING...</span> | LOCATION: CLASSIFIED | CONNECTION: LOCAL
-        </div>
-        
-        <!-- Connection error overlay -->
-        <div id="connection-error">
-            <h2>CONNECTION ERROR</h2>
-            <p>Unable to establish secure connection to TetraKlein-OS Field Terminal</p>
-            <button id="reconnect-btn">RECONNECT</button>
+        <div id="terminal-content" class="terminal-content"></div>
+        <div class="terminal-input">
+            <span id="prompt">guest@tetraklein-os:~$</span>
+            <input type="text" id="input" autofocus>
         </div>
     </div>
-
+    <script src="js/terminal.js"></script>
     <script>
         const output = document.getElementById('output');
         const input = document.getElementById('input');

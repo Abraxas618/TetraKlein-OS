@@ -9,6 +9,153 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// Virtual file system for Cold War terminal
+const virtualFileSystem = {
+  // User is initially in home directory
+  currentDirectory: '/home/fieldcommander',
+  currentUser: 'fieldcommander',
+  loggedIn: false,
+  
+  // Directory structure
+  directories: {
+    '/': ['home', 'vault', 'ops', 'etc', 'bin', 'usr'],
+    '/home': ['fieldcommander', 'agentzero', 'shadowhawk'],
+    '/home/fieldcommander': ['LOGIN_RECORD.txt', 'personal', 'mission_logs'],
+    '/home/agentzero': ['LOCKED_ACCESS_ONLY.txt'],
+    '/home/shadowhawk': ['LOCKED_ACCESS_ONLY.txt'],
+    '/vault': ['ProjectPegasus_Report.txt', 'MontaukChairOpsManual.txt', 'PhiladelphiaExperiment_IncidentReport.txt', 'QuantumMesh_NetworkPrototype.txt', 'SovereignVoting_Directive.txt', 'TemporalDisplacement_Tests1979.txt'],
+    '/ops': ['valkyrie', 'eclipse', 'tesseract'],
+    '/ops/valkyrie': ['MISSION_BRIEF.txt', 'intel', 'resources', 'comms'],
+    '/ops/eclipse': ['OPERATION_SUMMARY.txt', 'assets', 'intel', 'personnel'],
+    '/ops/tesseract': ['PROJECT_SUMMARY.txt', 'research', 'timelines', 'security'],
+    '/etc': ['config', 'security', 'yggdrasil'],
+    '/usr': ['bin', 'lib', 'share'],
+    '/bin': ['login', 'logout', 'dir', 'cat', 'cd', 'whoami', 'help', 'clear']
+  },
+
+  // File contents cache to avoid reading from disk each time
+  fileContents: {},
+
+  // Load file from disk if exists, otherwise return placeholder
+  getFileContent: function(filePath) {
+    // Check if content is already cached
+    if (this.fileContents[filePath]) {
+      return this.fileContents[filePath];
+    }
+
+    // Convert virtual path to real file path
+    const realPath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+    
+    try {
+      // Try to read from the actual file system
+      if (fs.existsSync(realPath)) {
+        const content = fs.readFileSync(realPath, 'utf8');
+        this.fileContents[filePath] = content;
+        return content;
+      }
+    } catch (error) {
+      console.error(`Error reading file ${realPath}:`, error);
+    }
+
+    // For files that don't exist physically, return a placeholder
+    return `CLASSIFIED DOCUMENT: ${path.basename(filePath)}\nACCESS DENIED: CLEARANCE LEVEL INSUFFICIENT`;
+  },
+
+  // Navigate directories
+  changeDirectory: function(targetDir) {
+    // Handle absolute path
+    let newDir = targetDir;
+    
+    if (!targetDir.startsWith('/')) {
+      // Handle relative path
+      if (targetDir === '..') {
+        // Go up one directory
+        const parts = this.currentDirectory.split('/');
+        parts.pop();
+        newDir = parts.join('/') || '/';
+      } else if (targetDir === '.') {
+        // Stay in current directory
+        newDir = this.currentDirectory;
+      } else {
+        // Go to subdirectory
+        newDir = path.join(this.currentDirectory, targetDir);
+      }
+    }
+
+    // Check if directory exists
+    const dirParts = newDir.split('/').filter(Boolean);
+    let checkPath = '';
+    
+    for (const part of dirParts) {
+      checkPath = checkPath ? `${checkPath}/${part}` : `/${part}`;
+      if (!this.directories[checkPath] && !this.directories[checkPath.toLowerCase()]) {
+        return { success: false, message: `Directory not found: ${newDir}` };
+      }
+    }
+
+    this.currentDirectory = newDir;
+    return { success: true, message: `Changed directory to ${newDir}` };
+  },
+  
+  // List directory contents
+  listDirectory: function(targetDir = null) {
+    const dir = targetDir || this.currentDirectory;
+    const items = this.directories[dir] || this.directories[dir.toLowerCase()] || [];
+    
+    const output = [
+      `Directory of ${dir}`,
+      '------------------------'
+    ];
+    
+    // Add parent directory if not root
+    if (dir !== '/') {
+      output.push('..  [Directory]');
+    }
+    
+    // Add files and directories
+    items.forEach(item => {
+      const fullPath = path.join(dir, item);
+      const isDirectory = this.directories[fullPath] || this.directories[fullPath.toLowerCase()];
+      output.push(`${item}  ${isDirectory ? '[Directory]' : '[File]'}`);
+    });
+    
+    return output.join('\n');
+  },
+  
+  // Read file contents
+  readFile: function(filename) {
+    // Convert to absolute path if needed
+    let filePath = filename;
+    if (!filename.startsWith('/')) {
+      filePath = path.join(this.currentDirectory, filename);
+    }
+    
+    // Check if path exists by navigating through directories
+    const dirPath = path.dirname(filePath);
+    const dirParts = dirPath.split('/').filter(Boolean);
+    let checkPath = '';
+    
+    for (const part of dirParts) {
+      checkPath = checkPath ? `${checkPath}/${part}` : `/${part}`;
+      if (!this.directories[checkPath] && !this.directories[checkPath.toLowerCase()]) {
+        return `Error: Path not found: ${dirPath}`;
+      }
+    }
+    
+    // Check if file exists in current directory
+    const baseName = path.basename(filePath);
+    const parentDir = path.dirname(filePath);
+    const dirContents = this.directories[parentDir] || this.directories[parentDir.toLowerCase()] || [];
+    
+    if (!dirContents.includes(baseName) && !dirContents.map(f => f.toLowerCase()).includes(baseName.toLowerCase())) {
+      return `Error: File not found: ${filename}`;
+    }
+    
+    // Get file content
+    return this.getFileContent(filePath);
+  }
+};
+
 // Security error page HTML
 const securityErrorPage = `
 <!DOCTYPE html>
@@ -176,19 +323,94 @@ function isYggdrasilRunning() {
 
 // Command processor
 function processCommand(command) {
-  const commands = {
-    'login': () => {
+  // Split command into parts
+  const parts = command.split(' ');
+  const cmd = parts[0].toLowerCase();
+  const args = parts.slice(1).join(' ');
+  
+  // Special handling for file system commands
+  if (cmd === 'dir' || cmd === 'ls') {
+    return {
+      type: 'dir',
+      message: virtualFileSystem.listDirectory()
+    };
+  }
+  
+  if (cmd === 'cd') {
+    if (!args) {
       return {
-        type: 'login',
-        message: 'SECURE LOGIN SEQUENCE INITIATED\nEnter password:'
+        type: 'error',
+        message: 'Usage: cd <directory>'
       };
-    },
+    }
+    
+    const result = virtualFileSystem.changeDirectory(args);
+    return {
+      type: result.success ? 'cd' : 'error',
+      message: result.message
+    };
+  }
+  
+  if (cmd === 'cat' || cmd === 'type') {
+    if (!args) {
+      return {
+        type: 'error',
+        message: 'Usage: cat <filename>'
+      };
+    }
+    
+    return {
+      type: 'cat',
+      message: virtualFileSystem.readFile(args)
+    };
+  }
+  
+  if (cmd === 'whoami') {
+    return {
+      type: 'whoami',
+      message: virtualFileSystem.loggedIn ? 
+        `User: ${virtualFileSystem.currentUser}\nClearance: COSMIC\nAccess Level: TOP SECRET` :
+        'Not logged in.'
+    };
+  }
+  
+  if (cmd === 'pwd' || cmd === 'cwd') {
+    return {
+      type: 'pwd',
+      message: `Current directory: ${virtualFileSystem.currentDirectory}`
+    };
+  }
+  
+  if (cmd === 'login') {
+    virtualFileSystem.loggedIn = true;
+    return {
+      type: 'login',
+      message: 'LOGIN SUCCESSFUL\nWelcome, FIELD COMMANDER.\nClearance Level: COSMIC\nAccess: GRANTED\n\nTERM-2271 SECURE TERMINAL READY.'
+    };
+  }
+  
+  if (cmd === 'logout') {
+    virtualFileSystem.loggedIn = false;
+    return {
+      type: 'logout',
+      message: 'LOGOUT SUCCESSFUL\nTerminal secured.'
+    };
+  }
+
+  // Standard commands
+  const commands = {
     'help': () => {
       return {
         type: 'help',
         message: `Available commands:
 - help: Show this help message
 - login: Start login sequence
+- logout: End current session
+- dir/ls: List directory contents
+- cd <dir>: Change directory
+- cat/type <file>: View file contents
+- whoami: Display current user
+- pwd/cwd: Show current directory
 - status: Show system status
 - clear: Clear terminal
 - meshstatus: Show mesh network status
@@ -237,9 +459,11 @@ function processCommand(command) {
       };
     },
     'time': () => {
+      // Return time in Cold War era format (1983)
+      const now = new Date();
       return {
         type: 'time',
-        message: `Current time: ${new Date().toLocaleTimeString()}`
+        message: `Current time: ${now.toLocaleTimeString()}\nCurrent date: 1983-04-15`
       };
     },
     'echo': (args) => {
@@ -270,11 +494,6 @@ function processCommand(command) {
     }
   };
 
-  // Parse command and arguments
-  const parts = command.split(' ');
-  const cmd = parts[0].toLowerCase();
-  const args = parts.slice(1).join(' ');
-  
   // Handle special case for echo
   if (cmd === 'echo') {
     return commands.echo(args);
@@ -325,11 +544,27 @@ process.on('uncaughtException', (error) => {
   console.log('TetraKlein-OS Field Terminal is still running');
 });
 
+// Initialize the file system by reading real files where available
+function initializeFileSystem() {
+  // Check and create directories if they don't exist
+  ['vault', 'ops', 'ops/valkyrie', 'ops/eclipse', 'ops/tesseract', 'home', 'home/fieldcommander'].forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+      console.log(`Created directory: ${dir}`);
+    }
+  });
+  
+  console.log('Virtual file system initialized');
+}
+
 // Log startup information
 console.log('Starting TetraKlein-OS Field Terminal...');
 console.log(`Node.js version: ${process.version}`);
 console.log(`Current working directory: ${process.cwd()}`);
 console.log(`Yggdrasil status: ${isYggdrasilRunning() ? 'Running' : 'Mock Mode'}`);
+
+// Initialize file system
+initializeFileSystem();
 
 // Start server with port fallback
 const server = startServer(PORT); 

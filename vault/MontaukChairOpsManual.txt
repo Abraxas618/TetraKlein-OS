@@ -1,0 +1,79 @@
+=====================================
+CLASSIFIED: TOP SECRET/MAJIC-12/ORION
+MONTAUK CHAIR - OPERATIONAL MANUAL
+PROJECT: PHOENIX II / LOOKING GLASS
+=====================================
+
+REVISION: 08-17-1981
+COPY: 3 of 7
+CUSTODIAN: Dr. John von Neumann
+
+WARNING: THIS DOCUMENT CONTAINS INFORMATION AFFECTING NATIONAL SECURITY.
+UNAUTHORIZED DISCLOSURE SUBJECT TO CRIMINAL PENALTIES.
+
+1. SYSTEM OVERVIEW:
+   The Montauk Psychotronic Chair (MPC) functions as a non-linear temporal interface
+   designed to amplify and direct psychic energy via Tesla coil harmonics to generate
+   controlled spacetime distortions.
+
+2. OPERATIONAL COMPONENTS:
+   2.1 Primary Chair Assembly - Neodymium-tungsten alloy frame, orgone accumulator cushions
+   2.2 Tesla Array - 3 primary coils (20ft), 12 secondary resonance coils
+   2.3 Temporal Reference Calibration Unit (DELTA-7)
+   2.4 Cray XMP/IBM 360 Hybrid Interface System
+   2.5 EMF Dampening Field Generators (6)
+   2.6 Subject Monitoring Systems
+       - EEG (24-channel modified)
+       - Heart rate/Respiration
+       - Skin conductance
+       - Pupillary response
+       - Pineal gland activity monitor
+
+3. PREPARATION PROTOCOLS:
+   3.1 System Initialization (Min. 3 hrs before operation)
+       - Power-up sequence must follow Appendix A precisely
+       - Delta wave calibration requires 45 min stabilization
+       - Coil temperature must not exceed 47°C
+
+   3.2 Subject Preparation
+       - No metallic objects on person
+       - Administer Compound Y-4 (see dosage chart, pg. 43)
+       - Initial isolation period: 4 hours minimum
+       - Psychic baseline measurement required
+
+4. OPERATIONAL PARAMETERS:
+   4.1 Maximum continuous operation: 22 minutes
+   4.2 Cooldown period between sessions: 4 hours minimum
+   4.3 No more than 3 operators within 20ft radius during active phase
+   4.4 Emergency shutdown procedures - See Appendix C
+
+5. SPECIAL CONSIDERATIONS:
+   5.1 Temporal Convergence Events (TCE)
+       - If Delta reading exceeds 9.7, initiate RAPID SHUTDOWN
+       - Document all visions/phenomena reported by operator
+       - Temporal echo phenomena may persist up to 72 hours
+
+   5.2 Subject Selection
+       - Psychic sensitivity rating must exceed 7.4 on Brandenburg scale
+       - Previous timeline divergence experience preferred
+       - Dexterous chronoception ability required
+
+6. MAINTENANCE:
+   6.1 Coil retuning required after every 3 operational cycles
+   6.2 Orgone accumulators must be purged bi-weekly
+   6.3 Crystal array replacement schedule - See Appendix F
+
+7. EMERGENCY PROCEDURES:
+   7.1 Timeline Divergence Event (ALABASTER Protocol)
+   7.2 Operator Synaptic Overload (CRIMSON Protocol)
+   7.3 Temporal Bleedthrough (INDIGO Protocol)
+   7.4 Reality Anchor Failure (OBSIDIAN Protocol)
+
+8. RESULTS CLASSIFICATION:
+   ALL observations, recordings, and temporal artifacts are classified COSMIC TOP SECRET.
+   Debriefing protocols MUST follow Section 12 guidelines.
+
+=======================================
+BY AUTHORITY: MAJESTIC-12 / DELTA GROUP
+DECLASSIFICATION DATE: 01/01/2099
+======================================= 
