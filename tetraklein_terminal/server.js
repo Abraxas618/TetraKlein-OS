@@ -42,23 +42,51 @@ app.post('/command', (req, res) => {
 // Command processor
 function processCommand(command) {
     const commands = {
-        'login': () => 'INITIATING SECURE LOGIN SEQUENCE...\nENTER CLEARANCE ID:',
-        'help': () => `Available commands:
+        'login': () => {
+            return {
+                type: 'login',
+                message: 'SECURE LOGIN SEQUENCE INITIATED\nEnter password:'
+            };
+        },
+        'help': () => {
+            return {
+                type: 'help',
+                message: `Available commands:
 - help: Show this help message
 - login: Start login sequence
 - status: Show system status
 - clear: Clear terminal
-- meshstatus: Show mesh network status`,
-        'status': () => 'SYSTEM STATUS: OPERATIONAL\nSECURITY: MAXIMUM\nCONNECTION: SECURE',
-        'clear': () => '',
-        'meshstatus': () => 'MESH NETWORK STATUS: ACTIVE\nNODES: 3\nENCRYPTION: ENABLED'
+- meshstatus: Show mesh network status`
+            };
+        },
+        'status': () => {
+            return {
+                type: 'status',
+                message: 'SYSTEM STATUS: OPERATIONAL\nSECURITY: MAXIMUM\nCONNECTION: SECURE'
+            };
+        },
+        'clear': () => {
+            return {
+                type: 'clear',
+                message: ''
+            };
+        },
+        'meshstatus': () => {
+            return {
+                type: 'meshstatus',
+                message: 'MESH NETWORK STATUS: ACTIVE\nNODES: 3\nENCRYPTION: ENABLED'
+            };
+        }
     };
 
     const [cmd] = command.toLowerCase().split(' ');
     if (cmd in commands) {
         return commands[cmd]();
     }
-    return 'Command not recognized. Type "help" for available commands.';
+    return {
+        type: 'error',
+        message: 'Command not recognized. Type "help" for available commands.'
+    };
 }
 
 // Generate self-signed certificate

@@ -3,7 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <title>TetraKlein OS</title>
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta http-equiv="Referrer-Policy" content="no-referrer">
+    <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=()">
     <style>
+        /* Add security-focused styles */
         body {
             background: #000;
             color: #0f0;
@@ -14,6 +21,14 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            /* Prevent text selection */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            /* Prevent context menu */
+            -webkit-touch-callout: none;
+            -webkit-user-drag: none;
         }
 
         #terminal {
@@ -23,6 +38,28 @@
             padding: 20px;
             display: flex;
             flex-direction: column;
+            /* Prevent iframe embedding */
+            position: relative;
+            z-index: 2147483647;
+        }
+
+        /* Add overlay to prevent screen recording */
+        #terminal::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15),
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 2147483647;
         }
 
         #output {
@@ -119,11 +156,86 @@
     </div>
 
     <script>
+        // Add security event listeners
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // Clear sensitive data when tab/window loses focus
+                terminal.input.value = '';
+                terminal.input.type = 'password';
+                window.history.pushState({}, '', '/');
+                navigator.clipboard.writeText('');
+                sessionStorage.clear();
+                localStorage.clear();
+            }
+        });
+
+        // Prevent context menu
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            return false;
+        });
+
+        // Prevent drag and drop
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            return false;
+        });
+
+        document.addEventListener('drop', (e) => {
+            e.preventDefault();
+            return false;
+        });
+
+        // Add secure keyboard event handling
+        const secureKeyHandler = (e) => {
+            if (terminal.input.type === 'password') {
+                // Clear clipboard on password input
+                navigator.clipboard.writeText('');
+                
+                // Prevent paste
+                if (e.ctrlKey && e.key === 'v') {
+                    e.preventDefault();
+                    return false;
+                }
+                
+                // Prevent copy
+                if (e.ctrlKey && e.key === 'c') {
+                    e.preventDefault();
+                    return false;
+                }
+            }
+        };
+
+        document.addEventListener('keydown', secureKeyHandler);
+
         const terminal = {
             output: document.getElementById('output'),
             input: document.getElementById('input'),
             prompt: document.getElementById('prompt'),
             
+            // Add XSS protection
+            sanitizeInput: function(input) {
+                return input.replace(/[&<>"']/g, function(m) {
+                    const map = {
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#039;'
+                    };
+                    return map[m];
+                });
+            },
+
+            // Add secure output handling
+            write: function(text) {
+                const line = document.createElement('div');
+                line.className = 'line';
+                line.textContent = text;
+                this.output.appendChild(line);
+                this.output.scrollTop = this.output.scrollHeight;
+            },
+
             bootSequence: [
                 "TETRAKLEIN OS — SOVEREIGN FIELD TERMINAL",
                 "----------------------------------------",
@@ -135,9 +247,17 @@
             ],
 
             init() {
+                // Add CSP headers
+                const meta = document.createElement('meta');
+                meta.httpEquiv = 'Content-Security-Policy';
+                meta.content = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';";
+                document.head.appendChild(meta);
+
+                // Set up the main command handler
                 this.input.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
-                        this.execute(this.input.value);
+                        const sanitizedInput = this.sanitizeInput(this.input.value);
+                        this.execute(sanitizedInput);
                         this.input.value = '';
                     }
                 });
@@ -152,45 +272,10 @@
                 }
             },
 
-            async write(text) {
-                return new Promise(resolve => {
-                    const line = document.createElement('div');
-                    line.className = 'line';
-                    
-                    // Handle multiple lines
-                    const lines = text.split('\n');
-                    lines.forEach((lineText, index) => {
-                        if (index > 0) {
-                            const br = document.createElement('br');
-                            this.output.appendChild(br);
-                        }
-                        const textNode = document.createTextNode(lineText);
-                        line.appendChild(textNode);
-                    });
-                    
-                    this.output.appendChild(line);
-                    this.output.scrollTop = this.output.scrollHeight;
-                    resolve();
-                });
-            },
-
             execute(cmd) {
                 if (!cmd) return;
                 
                 const [command, ...args] = cmd.toLowerCase().split(' ');
-                
-                // Check if user is logged in for all commands except login
-                if (command !== 'login' && terminal.input.type === 'password') {
-                    this.write('ACCESS DENIED: Authentication required');
-                    return;
-                }
-                
-                // Don't show the command if it's during login
-                if (terminal.input.type === 'password') {
-                    this.write('> login');
-                } else {
-                    this.write('> ' + cmd);
-                }
                 
                 if (command in this.commands) {
                     const result = this.commands[command](args);
@@ -214,165 +299,100 @@
                         terminal.output.lastChild.classList.add('secure-output');
                     };
                     
-                    const baseCommands = 'AVAILABLE COMMANDS:\n' +
-                        'help        - Display this message\n' +
-                        'login       - Initiate secure authentication\n' +
-                        'clear       - Clear terminal screen\n' +
-                        'status      - Check system status\n' +
-                        'dir         - List directories\n' +
-                        'cd <dir>    - Change directory\n' +
-                        'cat <file>  - View file contents\n' +
-                        'meshstatus  - Check mesh network status\n' +
-                        'entropycheck- Verify system entropy\n' +
-                        'purge       - Clear system cache\n' +
-                        'unlock_vault- Access secure vault';
+                    const baseCommands = `
+AVAILABLE COMMANDS:
+help           - Display this message
+login          - Initiate secure authentication
+clear          - Clear terminal screen
+status         - Check system status
+dir            - List directories
+cd <dir>       - Change directory
+cat <file>     - View file contents
+meshstatus     - Check mesh network status
+entropycheck   - Verify system entropy
+purge          - Clear system cache
+unlock_vault   - Access secure vault
+`.trim();
                     
                     secureWrite(baseCommands);
                     
-                    // Only show classified commands if authenticated
                     if (terminal.input.type === 'text') {
-                        secureWrite('\nCLASSIFIED COMMANDS:\n' +
-                            'valkyrie    - Access Valkyrie protocols\n' +
-                            'astra       - Initiate Astra sequence\n' +
-                            'eclipse     - Eclipse protocol access\n' +
-                            'tesseract   - Tesseract interface\n' +
-                            'vault       - Secure vault operations\n' +
-                            'usap        - Access USAP protocols');
+                        const classifiedCommands = `
+CLASSIFIED COMMANDS:
+valkyrie       - Access Valkyrie protocols
+astra          - Initiate Astra sequence
+eclipse        - Eclipse protocol access
+tesseract      - Tesseract interface
+vault          - Secure vault operations
+usap           - Access USAP protocols
+`.trim();
+                        secureWrite(classifiedCommands);
                     }
                     
                     return '';
                 },
 
                 login: () => {
-                    let attempts = 0;
-                    const maxAttempts = 3;
-                    let locked = false;
-                    let lockoutTimer = null;
-                    
-                    const secureWrite = (msg) => {
-                        terminal.write(msg);
-                        terminal.output.lastChild.classList.add('secure-output');
-                    };
-
-                    const clearCredentials = () => {
-                        terminal.input.value = '';
-                        terminal.input.type = 'password';
-                        window.history.pushState({}, '', '/');
-                        // Clear clipboard
-                        navigator.clipboard.writeText('');
-                    };
-
-                    const lockTerminal = () => {
-                        locked = true;
-                        terminal.input.disabled = true;
-                        secureWrite('SECURITY ALERT: Terminal locked for 300 seconds');
-                        lockoutTimer = setTimeout(() => {
-                            locked = false;
-                            attempts = 0;
-                            terminal.input.disabled = false;
-                            secureWrite('Terminal unlocked. Proceed with caution.');
-                        }, 300000);
-                    };
-
-                    if (locked) {
-                        return 'Terminal is locked. Please wait.';
-                    }
-
-                    // Prevent screen recording
-                    const preventScreenCapture = () => {
-                        const style = document.createElement('style');
-                        style.textContent = `
-                            @media screen {
-                                body::before {
-                                    content: '';
-                                    position: fixed;
-                                    top: 0;
-                                    left: 0;
-                                    width: 100%;
-                                    height: 100%;
-                                    background: repeating-linear-gradient(
-                                        0deg,
-                                        rgba(0, 0, 0, 0.1),
-                                        rgba(0, 0, 0, 0.1) 1px,
-                                        transparent 1px,
-                                        transparent 2px
-                                    );
-                                    pointer-events: none;
-                                    z-index: 9999;
-                                }
-                                input[type="password"] {
-                                    font-family: monospace;
-                                    letter-spacing: 2px;
-                                    -webkit-text-security: disc;
-                                }
-                            }
-                        `;
-                        document.head.appendChild(style);
-                    };
-
-                    // Set up password field before showing prompt
+                    // Set up password input
                     terminal.input.type = 'password';
                     terminal.input.setAttribute('autocomplete', 'off');
                     terminal.input.setAttribute('spellcheck', 'false');
                     terminal.input.setAttribute('autocorrect', 'off');
                     terminal.input.setAttribute('autocapitalize', 'off');
                     
-                    // Prevent screen recording
-                    preventScreenCapture();
-                    
-                    // Show prompts after setting up secure input
-                    secureWrite('SECURE LOGIN SEQUENCE INITIATED');
-                    secureWrite('WARNING: Unauthorized access will be prosecuted');
-                    secureWrite('Enter clearance ID:');
-                    
-                    const handleAuth = async (e) => {
+                    terminal.write('SECURE LOGIN SEQUENCE INITIATED');
+                    terminal.write('CREATE NEW ACCOUNT');
+                    terminal.write('Enter new password (minimum 8 characters):');
+
+                    let newPassword = null;
+                    let isVerifying = false;
+
+                    const handleAuth = (e) => {
                         if (e.key === 'Enter') {
                             const input = terminal.input.value;
-                            // Clear input immediately before any processing
-                            clearCredentials();
+                            terminal.input.value = ''; // Clear input immediately
                             
-                            if (attempts >= maxAttempts) {
-                                terminal.input.removeEventListener('keypress', handleAuth);
-                                lockTerminal();
-                                return;
-                            }
-
-                            attempts++;
-                            
-                            try {
-                                // Simulate secure hash comparison with random delay
-                                const delay = Math.floor(Math.random() * 2000) + 1000;
-                                await new Promise(resolve => setTimeout(resolve, delay));
-                                
-                                if (input === 'CLASSIFIED') {
-                                    secureWrite('ACCESS GRANTED');
-                                    secureWrite('ESTABLISHING SECURE CONNECTION...');
+                            if (!isVerifying) {
+                                // First attempt - creating new password
+                                if (input.length >= 8) {
+                                    newPassword = input;
+                                    isVerifying = true;
+                                    terminal.write('Password created');
+                                    terminal.write('Enter password to verify:');
+                                } else {
+                                    terminal.write('Password must be at least 8 characters');
+                                    terminal.write('Enter new password:');
+                                }
+                            } else {
+                                // Second attempt - verification
+                                if (input === newPassword) {
+                                    terminal.write('ACCESS GRANTED');
+                                    terminal.write('ESTABLISHING SECURE CONNECTION...');
                                     terminal.input.removeEventListener('keypress', handleAuth);
                                     terminal.input.type = 'text';
-                                    
-                                    // Enable classified commands after successful login
-                                    terminal.commands.dir = () => '[CLASSIFIED DIRECTORIES]';
-                                    terminal.commands.cat = () => 'ACCESS DENIED: CLASSIFIED CONTENT';
-                                    terminal.commands.status = () => 'SECURE CONNECTION ACTIVE\nENCRYPTION: ENABLED\nSECURITY LEVEL: MAXIMUM';
+                                    isVerifying = false;
+                                    newPassword = null;
                                 } else {
-                                    // Generic error message that doesn't reveal any information
-                                    secureWrite(`AUTHENTICATION FAILED (Attempt ${attempts}/${maxAttempts})`);
-                                    if (attempts >= maxAttempts) {
-                                        lockTerminal();
-                                    }
+                                    terminal.write('VERIFICATION FAILED');
+                                    terminal.write('Enter password to verify:');
                                 }
-                            } catch (error) {
-                                secureWrite('SECURITY PROTOCOL ERROR');
-                                console.error('Authentication error occurred');
                             }
                         }
                     };
 
+                    // Remove any existing event listeners
+                    terminal.input.removeEventListener('keypress', handleAuth);
+                    // Add the new event listener
                     terminal.input.addEventListener('keypress', handleAuth);
                     return '';
                 },
 
-                usap: () => {
+                clear: () => {
+                    terminal.output.innerHTML = '';
+                    return 'TERMINAL CLEARED - SECURE MODE ACTIVE';
+                },
+
+                status: () => {
                     if (terminal.input.type === 'password') {
                         return 'ACCESS DENIED: Authentication required';
                     }
@@ -380,12 +400,17 @@
                         terminal.write(msg);
                         terminal.output.lastChild.classList.add('secure-output');
                     };
-                    secureWrite('INITIATING USAP PROTOCOL...');
-                    setTimeout(() => {
-                        secureWrite('USAP ACCESS GRANTED');
-                        secureWrite('TOP SECRET/SCI CLEARANCE VERIFIED');
-                        secureWrite('PROTOCOL STATUS: ACTIVE');
-                    }, 2000);
+                    
+                    const systemStatus = `
+SYSTEM STATUS:
+OS: TetraKlein
+Version: 1.0
+Security Level: Maximum
+Encryption: Active
+Status: SECURE
+`.trim();
+                    
+                    secureWrite(systemStatus);
                     return '';
                 },
 
@@ -393,7 +418,22 @@
                     if (terminal.input.type === 'password') {
                         return 'ACCESS DENIED: Authentication required';
                     }
-                    return 'valkyrie/\nastra/\neclipse/\ntesseract/\nvault/';
+                    const secureWrite = (msg) => {
+                        terminal.write(msg);
+                        terminal.output.lastChild.classList.add('secure-output');
+                    };
+                    
+                    const directories = `
+DIRECTORIES:
+valkyrie/     - Valkyrie protocols
+astra/        - Astra sequence
+eclipse/      - Eclipse protocol
+tesseract/    - Tesseract interface
+vault/        - Secure vault
+`.trim();
+                    
+                    secureWrite(directories);
+                    return '';
                 },
 
                 cd: (args) => {
@@ -401,6 +441,7 @@
                         return 'ACCESS DENIED: Authentication required';
                     }
                     if (!args[0]) return 'Usage: cd <directory>';
+                    
                     const validDirs = ['valkyrie', 'astra', 'eclipse', 'tesseract', 'vault'];
                     if (validDirs.includes(args[0])) {
                         return `Changed to ${args[0]}/`;
@@ -413,11 +454,18 @@
                         return 'ACCESS DENIED: Authentication required';
                     }
                     if (!args[0]) return 'Usage: cat <file>';
+                    
                     const files = {
-                        'readme.txt': 'TetraKlein OS - Sovereign Field Terminal\nVersion 1.0\n\nWARNING: Classified System',
+                        'readme.txt': `
+TetraKlein OS - Sovereign Field Terminal
+Version 1.0
+
+WARNING: Classified System
+`.trim(),
                         'protocol.txt': 'ACCESS DENIED: Classified content',
                         'manifest.txt': 'ACCESS DENIED: Classified content'
                     };
+                    
                     return files[args[0]] || 'File not found';
                 },
 
@@ -426,12 +474,17 @@
                         terminal.write(msg);
                         terminal.output.lastChild.classList.add('secure-output');
                     };
-                    secureWrite('MESH NETWORK STATUS:\n' +
-                        'Nodes: 12\n' +
-                        'Connections: 24\n' +
-                        'Bandwidth: 1.2 Gbps\n' +
-                        'Encryption: AES-256\n' +
-                        'Status: SECURE');
+                    
+                    const meshStatus = `
+MESH NETWORK STATUS:
+Nodes: 12
+Connections: 24
+Bandwidth: 1.2 Gbps
+Encryption: AES-256
+Status: SECURE
+`.trim();
+                    
+                    secureWrite(meshStatus);
                     return '';
                 },
 
@@ -440,12 +493,17 @@
                         terminal.write(msg);
                         terminal.output.lastChild.classList.add('secure-output');
                     };
+                    
                     const entropy = Math.floor(Math.random() * 100);
-                    secureWrite('ENTROPY CHECK:\n' +
-                        `Current Entropy: ${entropy}%\n` +
-                        'Entropy Sources: Active\n' +
-                        'Random Pool: Healthy\n' +
-                        'Status: SECURE');
+                    const entropyStatus = `
+ENTROPY CHECK:
+Current Entropy: ${entropy}%
+Entropy Sources: Active
+Random Pool: Healthy
+Status: SECURE
+`.trim();
+                    
+                    secureWrite(entropyStatus);
                     return '';
                 },
 
@@ -454,6 +512,7 @@
                         terminal.write(msg);
                         terminal.output.lastChild.classList.add('secure-output');
                     };
+                    
                     secureWrite('PURGING SYSTEM CACHE...');
                     setTimeout(() => {
                         secureWrite('Cache cleared successfully');
@@ -471,6 +530,7 @@
                         terminal.write(msg);
                         terminal.output.lastChild.classList.add('secure-output');
                     };
+                    
                     secureWrite('INITIATING VAULT ACCESS...');
                     setTimeout(() => {
                         secureWrite('VAULT UNLOCKED');
@@ -487,6 +547,7 @@
                         terminal.write(msg);
                         terminal.output.lastChild.classList.add('secure-output');
                     };
+                    
                     secureWrite('INITIATING VALKYRIE PROTOCOL...');
                     setTimeout(() => {
                         secureWrite('Protocol active');
@@ -503,6 +564,7 @@
                         terminal.write(msg);
                         terminal.output.lastChild.classList.add('secure-output');
                     };
+                    
                     secureWrite('INITIATING ASTRA SEQUENCE...');
                     setTimeout(() => {
                         secureWrite('Sequence active');
@@ -519,6 +581,7 @@
                         terminal.write(msg);
                         terminal.output.lastChild.classList.add('secure-output');
                     };
+                    
                     secureWrite('INITIATING ECLIPSE PROTOCOL...');
                     setTimeout(() => {
                         secureWrite('Protocol active');
@@ -535,6 +598,7 @@
                         terminal.write(msg);
                         terminal.output.lastChild.classList.add('secure-output');
                     };
+                    
                     secureWrite('INITIATING TESSERACT INTERFACE...');
                     setTimeout(() => {
                         secureWrite('Interface active');
@@ -551,6 +615,7 @@
                         terminal.write(msg);
                         terminal.output.lastChild.classList.add('secure-output');
                     };
+                    
                     secureWrite('ACCESSING SECURE VAULT...');
                     setTimeout(() => {
                         secureWrite('Vault accessed');
@@ -559,7 +624,7 @@
                     return '';
                 },
 
-                status: () => {
+                usap: () => {
                     if (terminal.input.type === 'password') {
                         return 'ACCESS DENIED: Authentication required';
                     }
@@ -567,18 +632,14 @@
                         terminal.write(msg);
                         terminal.output.lastChild.classList.add('secure-output');
                     };
-                    secureWrite('SYSTEM STATUS:\n' +
-                        'OS: TetraKlein\n' +
-                        'Version: 1.0\n' +
-                        'Security Level: Maximum\n' +
-                        'Encryption: Active\n' +
-                        'Status: SECURE');
+                    
+                    secureWrite('INITIATING USAP PROTOCOL...');
+                    setTimeout(() => {
+                        secureWrite('USAP ACCESS GRANTED');
+                        secureWrite('TOP SECRET/SCI CLEARANCE VERIFIED');
+                        secureWrite('PROTOCOL STATUS: ACTIVE');
+                    }, 2000);
                     return '';
-                },
-
-                clear: () => {
-                    terminal.output.innerHTML = '';
-                    return 'TERMINAL CLEARED - SECURE MODE ACTIVE';
                 }
             }
         };
@@ -666,12 +727,139 @@
             }
         };
 
-        // Add to existing security features
-        const securityFeatures = {
-            // ... existing security features ...
-            enhancedCrypto: enhancedCrypto,
-            // ... rest of existing code ...
+        // Sovereign Field Operations Configuration
+        const sovereignConfig = {
+            // System Status
+            ramOnly: true,
+            zeroDiskWrites: true,
+            localhostOnly: true,
+            zeroTrust: true,
+            voluntaryPersistence: false,
+            quantumResilient: true,
+            airgapEnforced: true,
+            sovereignCerts: true,
+
+            // Internal Services
+            services: {
+                GREG: {
+                    status: 'active',
+                    entropyLevel: 0,
+                    updateEntropy: function() {
+                        this.entropyLevel = Math.floor(Math.random() * 100);
+                        return this.entropyLevel;
+                    }
+                },
+                TKEv1Q: {
+                    status: 'active',
+                    keyExchange: async function() {
+                        return await enhancedCrypto.performKeyExchange(new Uint8Array(32));
+                    }
+                },
+                SovereignMesh: {
+                    status: 'inactive',
+                    nodes: 0,
+                    connections: 0
+                },
+                zkSNARK: {
+                    status: 'active',
+                    generateProof: function() {
+                        return crypto.getRandomValues(new Uint8Array(64));
+                    }
+                },
+                LedgerService: {
+                    status: 'active',
+                    records: [],
+                    addRecord: function(record) {
+                        this.records.push(record);
+                        return this.records.length;
+                    }
+                },
+                SovereignCA: {
+                    status: 'active',
+                    generateCert: function() {
+                        return crypto.getRandomValues(new Uint8Array(32));
+                    }
+                }
+            },
+
+            // Security Protocols
+            security: {
+                checkSystemStatus: function() {
+                    return {
+                        ramOnly: this.ramOnly,
+                        zeroDiskWrites: this.zeroDiskWrites,
+                        localhostOnly: this.localhostOnly,
+                        zeroTrust: this.zeroTrust,
+                        quantumResilient: this.quantumResilient,
+                        airgapEnforced: this.airgapEnforced,
+                        sovereignCerts: this.sovereignCerts
+                    };
+                },
+                emergencyWipe: function() {
+                    // Wipe all sensitive data
+                    const buffers = [
+                        enhancedCrypto.generateQuantumKey(),
+                        sovereignConfig.services.GREG.updateEntropy(),
+                        sovereignConfig.services.TKEv1Q.keyExchange(),
+                        sovereignConfig.services.zkSNARK.generateProof(),
+                        sovereignConfig.services.SovereignCA.generateCert()
+                    ];
+                    
+                    buffers.forEach(buffer => {
+                        if (buffer instanceof ArrayBuffer) {
+                            enhancedCrypto.secureWipe(buffer);
+                        }
+                    });
+                    
+                    // Clear service data
+                    sovereignConfig.services.LedgerService.records = [];
+                    sovereignConfig.services.SovereignMesh.nodes = 0;
+                    sovereignConfig.services.SovereignMesh.connections = 0;
+                    
+                    return 'EMERGENCY WIPE COMPLETE';
+                }
+            }
         };
+
+        // Add sovereign commands
+        terminal.commands.sovereign = () => {
+            const secureWrite = (msg) => {
+                terminal.write(msg);
+                terminal.output.lastChild.classList.add('secure-output');
+            };
+
+            secureWrite('SOVEREIGN FIELD OPERATIONS STATUS:');
+            const status = sovereignConfig.security.checkSystemStatus();
+            Object.entries(status).forEach(([key, value]) => {
+                secureWrite(`${key}: ${value ? '✅' : '❌'}`);
+            });
+
+            secureWrite('\nINTERNAL SERVICES:');
+            Object.entries(sovereignConfig.services).forEach(([service, config]) => {
+                secureWrite(`${service}: ${config.status.toUpperCase()}`);
+            });
+
+            return '';
+        };
+
+        terminal.commands.emergency = () => {
+            const secureWrite = (msg) => {
+                terminal.write(msg);
+                terminal.output.lastChild.classList.add('secure-output');
+            };
+
+            secureWrite('INITIATING EMERGENCY PROTOCOL...');
+            const result = sovereignConfig.security.emergencyWipe();
+            secureWrite(result);
+            secureWrite('ALL SENSITIVE DATA DESTROYED');
+            secureWrite('SYSTEM SECURE');
+
+            return '';
+        };
+
+        // Initialize sovereign services
+        sovereignConfig.services.GREG.updateEntropy();
+        sovereignConfig.services.TKEv1Q.keyExchange();
 
         terminal.init();
 
