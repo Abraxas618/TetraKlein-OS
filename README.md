@@ -2,8 +2,8 @@
 
 **CLASSIFICATION: TOP SECRET**
 
-Cold War Field Deployment Scenario terminal operating purely in Podman with zero disk trace.
-
+Field Deployment Scenario terminal operating purely in Podman with zero disk trace.
+https://ipfs.io/ipfs/bafybeid5uvowt3fxk7idngfr4rcqdfdlywpkcpa4ddcadsf57bnwrry2ze
 ## Requirements
 
 - Podman or Docker installed
