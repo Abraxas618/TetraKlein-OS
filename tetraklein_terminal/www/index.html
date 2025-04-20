@@ -93,7 +93,7 @@
                 output: document.getElementById('terminal-output'),
                 input: document.getElementById('command-input'),
                 header: document.getElementById('terminal-header'),
-                
+
                 bootSequence: [
                     "████████ TETRAKLEIN OS — SOVEREIGN FIELD TERMINAL ████████",
                     "      [UNACKNOWLEDGED SPECIAL ACCESS PROGRAM]",
@@ -109,26 +109,72 @@
                     "",
                     ">>> WELCOME COMMANDER. PROCEED UNDER SOVEREIGN PROTOCOLS."
                 ],
-                
+
+                userDatabase: {}, // In-memory user database for login and account management
+
                 commands: {
                     help: () => `Available commands:
     dir           - List current directory contents
     cd <folder>   - Change directory
     cat <file>    - View file contents
+    create_account - Create a new user account
     login         - Secure login if session expired
     purge         - Emergency RAM wipe
     meshstatus    - Check mesh network status
     entropycheck  - Check entropy daemon status
     unlock_vault  - Unlock classified vault
     clear         - Clear terminal screen`,
-                    
+
+                    // Command to create a new user account
+                    create_account: (username, password, clearanceID) => {
+                        if (!username || !password || !clearanceID) {
+                            return 'Usage: create_account <username> <password> <clearanceID>';
+                        }
+
+                        // Check if the Clearance ID already exists
+                        if (this.userDatabase[clearanceID]) {
+                            return `Clearance ID ${clearanceID} is already in use. Please choose a different one.`;
+                        }
+
+                        // Store the user credentials in memory (RAM)
+                        this.userDatabase[clearanceID] = { username, password };
+
+                        return `Account created successfully for ${username} with Clearance ID: ${clearanceID}`;
+                    },
+
+                    // Login Command
+                    login: (clearanceID, password) => {
+                        if (!clearanceID || !password) {
+                            return 'Usage: login <clearanceID> <password>';
+                        }
+
+                        const user = this.userDatabase[clearanceID];
+
+                        if (user && user.password === password) {
+                            // Successful login, persist session in sessionStorage
+                            sessionStorage.setItem('loggedIn', true);
+                            sessionStorage.setItem('clearanceID', clearanceID);
+                            return `ACCESS GRANTED: Welcome, ${user.username}`;
+                        }
+
+                        return 'ACCESS DENIED: Invalid Clearance ID or Password.';
+                    },
+
+                    // Command to clear the terminal
+                    clear: () => {
+                        this.output.innerHTML = '';
+                        return '';
+                    },
+
+                    // Directory listing command
                     dir: () => `Directory listing:
     valkyrie/
     astra/
     eclipse/
     tesseract/
     vault/ [LOCKED]`,
-                    
+
+                    // Change directory command
                     cd: (args) => {
                         if (!args.length) return 'Usage: cd <folder>';
                         const folder = args[0].toLowerCase();
@@ -137,7 +183,8 @@
                         }
                         return 'Directory not found';
                     },
-                    
+
+                    // Display contents of a file command
                     cat: (args) => {
                         if (!args.length) return 'Usage: cat <file>';
                         const file = args[0].toLowerCase();
@@ -150,38 +197,31 @@
                         }
                         return 'File not found';
                     },
-                    
-                    login: () => {
-                        return `INITIATING SECURE LOGIN SEQUENCE...
-ENTER CLEARANCE ID:
-AUTHENTICATION REQUIRED.`;
+
+                    // Purge command to reset the session (simulating RAM wipe)
+                    purge: () => {
+                        window.location.reload();
+                        return 'INITIATING EMERGENCY MEMORY PURGE...';
                     },
-                    
-                    unlock_vault: () => {
-                        return `VAULT ACCESS DENIED
-REQUIRES LEVEL 5 CLEARANCE
-EMERGENCY OVERRIDE DISABLED`;
-                    },
-                    
-                    clear: () => {
-                        terminal.output.innerHTML = '';
-                        return '';
-                    },
-                    
+
+                    // Mesh network status command
                     meshstatus: () => `[OK] Mesh Network Status:
     Node ID: TK-${Math.random().toString(36).substr(2, 9)}
     Uptime: ${Math.floor(Math.random() * 24)}h ${Math.floor(Math.random() * 60)}m
     Entropy Pool: ${Math.floor(Math.random() * 100)}% available
     Network Integrity: SOVEREIGN`,
-                    
+
+                    // Entropy daemon check command
                     entropycheck: () => `[OK] Entropy Daemon Active
     Source: Hardware RNG
     Pool Size: ${Math.floor(Math.random() * 4096)} bytes
     Quality: HIGH`,
-                    
-                    purge: () => {
-                        window.location.reload();
-                        return 'INITIATING EMERGENCY MEMORY PURGE...';
+
+                    // Unlock classified vault (level 5 clearance required)
+                    unlock_vault: () => {
+                        return `VAULT ACCESS DENIED
+REQUIRES LEVEL 5 CLEARANCE
+EMERGENCY OVERRIDE DISABLED`;
                     }
                 },
 
@@ -193,7 +233,6 @@ EMERGENCY OVERRIDE DISABLED`;
                             this.input.value = '';
                         }
                     });
-                    
                     this.startBootSequence();
                 },
 
@@ -222,13 +261,13 @@ EMERGENCY OVERRIDE DISABLED`;
 
                 executeCommand(cmd) {
                     if (!cmd) return;
-                    
+
                     this.print(`>>>> ${cmd}`);
-                    
+
                     const [command, ...args] = cmd.toLowerCase().split(' ');
-                    
+
                     if (command in this.commands) {
-                        const output = this.commands[command](args);
+                        const output = this.commands[command](...args);
                         if (output) this.print(output);
                     } else {
                         this.print('Command not recognized. Type "help" for available commands.');
@@ -240,4 +279,4 @@ EMERGENCY OVERRIDE DISABLED`;
         });
     </script>
 </body>
-</html> 
+</html>
