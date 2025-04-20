@@ -1,48 +1,96 @@
-# TetraKlein-OS Terminal Interface
+# TetraKlein-OS Field Terminal
 
-A stylized interactive terminal interface with a retro computer look and feel. This project provides a simulated terminal environment with basic command functionality.
+**CLASSIFICATION: TOP SECRET**
 
-## Features
+Cold War Field Deployment Scenario terminal operating purely in Podman with zero disk trace.
 
-- Modern CSS styling with retro terminal aesthetics
-- Interactive command input and response
-- Simulated file system navigation
-- Command history navigation (up/down arrows)
-- Responsive design for different screen sizes
+## Requirements
 
-## Usage
+- Podman or Docker installed
+- 64MB RAM minimum
+- Secure environment
 
-Simply open the `index.html` file in any modern web browser to start using the terminal interface. 
+## Quick Deployment
 
-### Available Commands
+### Linux/macOS
+Run the deployment script to build and launch the TetraKlein-OS Field Terminal:
 
-- `help` - Display available commands
-- `clear` - Clear the terminal screen
-- `echo [text]` - Display text
-- `ls` - List files and directories in the current location
-- `cd [directory]` - Change directory
-- `cat [file]` - Display file contents
-- `pwd` - Print working directory
-
-## Project Structure
-
-```
-TetraKlein-OS/
-├── index.html         # Main HTML file
-├── public/
-│   ├── css/
-│   │   └── terminal.css  # Terminal styling
-│   └── js/
-│       └── terminal.js   # Terminal functionality
-└── README.md          # This file
+```bash
+chmod +x deploy.sh
+./deploy.sh
 ```
 
-## Customization
+### Windows
+Run the PowerShell deployment script:
 
-You can customize the terminal by modifying:
-- `terminal.css` - Adjust colors, dimensions, and styling
-- `terminal.js` - Add new commands or modify existing functionality
+```powershell
+powershell -ExecutionPolicy Bypass -File deploy.ps1
+```
 
-## License
+## Troubleshooting
 
-MIT 
+If you encounter connection issues:
+
+1. Check if port 8080 is already in use (the system will try port 3000 as fallback)
+2. Verify that Podman/Docker is running
+3. Check container logs:
+   ```
+   podman logs tetraklein-os
+   ```
+4. Try running in foreground mode for debugging:
+   ```
+   podman run --rm -it -p 127.0.0.1:8080:8080 -v "$(pwd)/vault:/app/vault:Z" tetraklein-os
+   ```
+
+## Access Points
+
+- Terminal Interface: http://127.0.0.1:8080
+- Admin Dashboard: http://127.0.0.1:8080/admin
+
+## Security Features
+
+- RAM-only operation — container destroys itself after stop
+- Public-facing services bound to localhost only
+- Hardened Node.js server with security headers
+- No directory listing
+- Yggdrasil mesh networking with auto-configuration
+- Vault folder for classified file storage
+
+## Architecture
+
+- Alpine Linux base (minimal footprint)
+- Node.js + Express
+- No external frameworks (no React, Vite, or Webpack)
+- Cold War style green-on-black CRT terminal UI
+- Secure Top Secret Mesh Dashboard
+
+## Important Notes
+
+1. The container is configured to self-destruct when stopped
+2. All data stored in the vault folder is mounted from the host
+3. No data is persisted within the container after shutdown
+4. Yggdrasil daemon runs as a background service
+
+## Command Reference
+
+Available terminal commands:
+- `help`: Show help message
+- `login`: Start login sequence
+- `status`: Show system status
+- `clear`: Clear terminal
+- `meshstatus`: Show mesh network status
+- `admin`: Access admin dashboard
+- `time`: Show current time
+- `vault`: List vault contents
+- `ping`: Check connection status
+
+## Mission Guidelines
+
+1. Maintain secure communications
+2. Destroy all evidence after mission completion
+3. Keep all traffic localhost-bound
+4. Use vault folder for classified storage
+
+---
+
+*DESTROY THIS DOCUMENT AFTER READING* 
