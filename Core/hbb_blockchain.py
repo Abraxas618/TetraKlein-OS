@@ -1,15 +1,19 @@
 from pathlib import Path
+import time
+import json
+from rth import recursive_tesseract_hash  # Import Recursive Tesseract Hashing
 
 # Define the content for hbb_blockchain.py
 hbb_blockchain_code = '''"""
 Hypercube-Based Blockchain (HBB)
 Implements a 4D blockchain ledger where each node represents a hypercube cell.
-Uses SHAKE256 for hyperdimensional integrity.
+Uses Recursive Tesseract Hashing (RTH) for hyperdimensional integrity.
 """
 
 import hashlib
 import time
 import json
+from rth import recursive_tesseract_hash  # Import Recursive Tesseract Hashing
 
 
 class HyperBlock:
@@ -29,7 +33,9 @@ class HyperBlock:
             "previous_hash": self.previous_hash,
             "tesseract_hash": self.tesseract_hash
         }, sort_keys=True).encode()
-        return hashlib.shake_256(block_string).hexdigest(64)
+
+        # Use Recursive Tesseract Hashing (RTH) instead of SHAKE256
+        return recursive_tesseract_hash(block_string, depth=4)
 
 
 class HypercubeBlockchain:
@@ -38,19 +44,23 @@ class HypercubeBlockchain:
         self.create_genesis_block()
 
     def create_genesis_block(self):
+        # The Genesis Block: the first block in the blockchain
         genesis_block = HyperBlock(0, time.time(), "Genesis Block", "0", "0")
         self.chain.append(genesis_block)
 
     def add_block(self, data, tesseract_hash):
-        prev_block = self.chain[-1]
+        # Add a new block to the blockchain
+        prev_block = self.chain[-1]  # Get the last block in the chain
         new_block = HyperBlock(len(self.chain), time.time(), data, prev_block.hash, tesseract_hash)
         self.chain.append(new_block)
         return new_block
 
     def is_valid(self):
+        # Check if the blockchain is valid
         for i in range(1, len(self.chain)):
             curr = self.chain[i]
             prev = self.chain[i - 1]
+            # Validate the current block's hash and ensure it points to the previous block
             if curr.hash != curr.compute_hash() or curr.previous_hash != prev.hash:
                 return False
         return True

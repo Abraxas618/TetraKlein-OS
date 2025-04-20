@@ -1,0 +1,38 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Dependencies
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Build artifacts
+dist
+build
+*.log
+*.swp
+
+# OS specific
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*~
+.idea
+.vscode
+*.bak
+*.tmp
+*.gz
+*.zip
+*.tar
+
+# Project specific
+tetraklein_archive
+Core/
+Mesh/
+Docker/
+Docs/
+*.py 

@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TetraKlein-OS Terminal</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap">
+    <link rel="stylesheet" href="css/terminal.css">
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta http-equiv="Referrer-Policy" content="no-referrer">
+    <style>
+        /* Base styles */
+        body {
+            background: #000;
+            color: #0f0;
+            font-family: monospace;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .terminal {
+            width: 800px;
+            height: 600px;
+            border: 2px solid #0f0;
+            box-shadow: 0 0 10px #0f0;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* CRT screen effect */
+        .terminal::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(
+                ellipse at center,
+                rgba(0,50,0,0.2) 0%,
+                rgba(0,0,0,0.4) 100%
+            );
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Scanlines effect */
+        .terminal::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15),
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 2;
+            animation: flicker 0.15s infinite;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #0f0;
+            padding-bottom: 10px;
+            position: relative;
+            z-index: 3;
+        }
+
+        /* Content area */
+        .content {
+            display: flex;
+            flex-direction: column;
+            height: calc(100% - 100px);
+            position: relative;
+            z-index: 3;
+        }
+
+        /* Output area */
+        #output {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            line-height: 1.5;
+        }
+
+        /* Command line */
+        .command-line {
+            display: flex;
+            border-top: 1px solid #0f0;
+            padding-top: 10px;
+        }
+
+        /* Prompt */
+        #prompt {
+            color: #0f0;
+            margin-right: 10px;
+        }
+
+        /* Input field */
+        #input {
+            background: transparent;
+            border: none;
+            color: #0f0;
+            font-family: monospace;
+            font-size: 16px;
+            flex: 1;
+            outline: none;
+            caret-color: transparent;
+        }
+
+        /* Blinking cursor */
+        #cursor {
+            background-color: #0f0;
+            width: 10px;
+            height: 16px;
+            display: inline-block;
+            animation: blink 1s step-end infinite;
+            margin-left: -10px;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Status line */
+        .status {
+            margin-top: 10px;
+            font-size: 12px;
+            border-top: 1px solid #0f0;
+            padding-top: 5px;
+            text-align: right;
+        }
+
+        /* Animations */
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 0.85; }
+            50% { opacity: 0.95; }
+        }
+
+        /* Text flicker effect */
+        .flicker {
+            animation: textFlicker 3s infinite;
+        }
+
+        @keyframes textFlicker {
+            0%, 98%, 100% { opacity: 1; }
+            99% { opacity: 0.8; }
+        }
+        
+        /* Connection error overlay */
+        #connection-error {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #f00;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            display: none;
+        }
+        
+        #reconnect-btn {
+            background: transparent;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 10px 20px;
+            margin-top: 20px;
+            font-family: monospace;
+            cursor: pointer;
+        }
+        
+        #reconnect-btn:hover {
+            background-color: rgba(0, 255, 0, 0.1);
+        }
+        
+        /* Mobile responsiveness */
+        @media (max-width: 850px) {
+            .terminal {
+                width: 95%;
+                height: 90vh;
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal-container">
+        <div class="terminal-header">
+            <div class="terminal-controls">
+                <div class="control-btn control-close"></div>
+                <div class="control-btn control-minimize"></div>
+                <div class="control-btn control-maximize"></div>
+            </div>
+            <div class="terminal-title">TetraKlein-OS v1.0</div>
+        </div>
+        <div id="terminal-content" class="terminal-content"></div>
+        <div class="terminal-input">
+            <span id="prompt">guest@tetraklein-os:~$</span>
+            <input type="text" id="input" autofocus>
+        </div>
+    </div>
+    <script src="js/terminal.js"></script>
+    <script>
+        const output = document.getElementById('output');
+        const input = document.getElementById('input');
+        const cursor = document.getElementById('cursor');
+        const connectionStatus = document.getElementById('connection-status');
+        const connectionError = document.getElementById('connection-error');
+        const reconnectBtn = document.getElementById('reconnect-btn');
+        
+        let serverConnected = false;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+        
+        // Check connection on load
+        window.addEventListener('load', () => {
+            checkConnection();
+            bootSequence();
+        });
+        
+        // Check if server is available
+        function checkConnection() {
+            connectionStatus.textContent = "CONNECTING...";
+            
+            fetch('/health')
+                .then(response => {
+                    if (response.status === 200) {
+                        serverConnected = true;
+                        connectionStatus.textContent = "SECURE";
+                        connectionError.style.display = "none";
+                        reconnectAttempts = 0;
+                    } else {
+                        handleConnectionError();
+                    }
+                })
+                .catch(error => {
+                    handleConnectionError();
+                });
+        }
+        
+        // Handle connection errors
+        function handleConnectionError() {
+            reconnectAttempts++;
+            serverConnected = false;
+            connectionStatus.textContent = "DISCONNECTED";
+            
+            if (reconnectAttempts >= maxReconnectAttempts) {
+                connectionError.style.display = "flex";
+                appendOutput("ERROR: Connection to TetraKlein-OS Field Terminal lost");
+                appendOutput("Please check if the container is running");
+            } else {
+                // Try to reconnect automatically
+                setTimeout(checkConnection, 2000);
+                appendOutput(`Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts})...`);
+            }
+        }
+        
+        // Reconnect button handler
+        reconnectBtn.addEventListener('click', () => {
+            reconnectAttempts = 0;
+            connectionError.style.display = "none";
+            appendOutput("Manual reconnection initiated...");
+            checkConnection();
+        });
+
+        // Handle input
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                const command = this.value.trim();
+                if (command) {
+                    // Echo command
+                    appendOutput(`> ${command}`);
+                    
+                    // Process command if connected
+                    if (serverConnected) {
+                        processCommand(command);
+                    } else {
+                        appendOutput("ERROR: Not connected to server");
+                        checkConnection();
+                    }
+                    
+                    // Clear input
+                    this.value = '';
+                }
+                
+                e.preventDefault();
+            }
+        });
+
+        // Process command
+        function processCommand(command) {
+            // Handle some commands locally for faster response
+            if (command.toLowerCase() === 'clear') {
+                output.innerHTML = '';
+                return;
+            }
+            
+            if (command.toLowerCase() === 'ping') {
+                appendOutput("PONG! Checking connection...");
+                checkConnection();
+                return;
+            }
+            
+            // Send command to server
+            fetch('/command', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ command })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.response) {
+                    handleResponse(data.response);
+                } else if (data.error) {
+                    appendOutput(`Error: ${data.error}`);
+                }
+            })
+            .catch(error => {
+                appendOutput(`CONNECTION ERROR: ${error.message}`);
+                handleConnectionError();
+            });
+        }
+
+        // Handle server response
+        function handleResponse(response) {
+            if (response.type === 'clear') {
+                output.innerHTML = '';
+            } else if (response.redirect) {
+                window.location.href = response.redirect;
+            } else {
+                appendOutput(response.message);
+            }
+        }
+
+        // Append to output
+        function appendOutput(text) {
+            output.innerHTML += text + '\n';
+            output.scrollTop = output.scrollHeight;
+        }
+
+        // Focus input on click anywhere in terminal
+        document.querySelector('.terminal').addEventListener('click', function(e) {
+            // Only focus if not clicking on buttons or links
+            if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A') {
+                input.focus();
+            }
+        });
+
+        // Simulate terminal boot sequence
+        function bootSequence() {
+            const bootMessages = [
+                'INITIALIZING SYSTEM...',
+                'CHECKING SECURITY PROTOCOLS...',
+                'MEMORY CHECK: OK',
+                'STORAGE CHECK: OK',
+                'NETWORK ISOLATION: ACTIVE',
+                'YGGDRASIL DAEMON: STARTING',
+                'ENCRYPTION PROTOCOLS: ENABLED',
+                'COLD WAR FIELD DEPLOYMENT: ACTIVE',
+                'TETRAKLEIN-OS FIELD TERMINAL READY'
+            ];
+            
+            output.innerHTML = '';
+            
+            bootMessages.forEach((msg, index) => {
+                setTimeout(() => {
+                    appendOutput(msg);
+                    if (index === bootMessages.length - 1) {
+                        appendOutput('\nWelcome to TetraKlein-OS Field Terminal');
+                        appendOutput('Type "help" for available commands');
+                    }
+                }, index * 300);
+            });
+        }
+        
+        // Periodic connection check
+        setInterval(checkConnection, 30000);
+    </script>
+</body>
+</html> 
