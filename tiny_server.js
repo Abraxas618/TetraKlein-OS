@@ -29,6 +29,7 @@ app.use(helmet({
   }
 }));
 app.use(compression());
+app.use(express.json());
 
 app.use((req, res, next) => {
   const rawIP = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
@@ -45,9 +46,11 @@ app.use((req, res, next) => {
 });
 
 app.use(express.static(path.join(__dirname, 'public'), {
-  dotfiles: 'deny', index: false, etag: false, lastModified: false
+  dotfiles: 'deny',
+  index: false,
+  etag: false,
+  lastModified: false
 }));
-app.use(express.json());
 
 // Command API
 app.post('/command', (req, res) => {
@@ -56,77 +59,57 @@ app.post('/command', (req, res) => {
 
   let input = command.trim();
   if (!userState[sessionId]) {
-    console.log('[NEW SESSION]', sessionId);
     userState[sessionId] = { awaitingPassword: false };
   }
 
   const state = userState[sessionId];
-  console.log('[SESSION]', sessionId, state);
 
-  // 🔐 FIRST, always check if awaiting password
-  if (state.awaitingPassword) {
-    if (
-      input.length >= 16 &&
-      /[a-z]/.test(input) &&
-      /[A-Z]/.test(input) &&
-      /[0-9]/.test(input) &&
-      /[^A-Za-z0-9]/.test(input)
-    ) {
-      state.awaitingPassword = false;
-      input = ''.padEnd(128, '\0');
-      input = null;
-      return res.json({
-        response: {
-          type: 'login',
-          message: '✅ PASSWORD ACCEPTED\nACCESS GRANTED.'
-        }
-      });
-    } else {
-      input = ''.padEnd(128, '\0');
-      input = null;
-      return res.json({
-        response: {
-          type: 'error',
-          message: '❌ PASSWORD REJECTED\nMust meet NSA standards.\nTry again:'
-        }
-      });
-    }
-  }
-
-  // 🧭 THEN: if typing "login" now
+  // 🔐 Handle login initiation FIRST
   if (input.toLowerCase() === 'login') {
     state.awaitingPassword = true;
     return res.json({
       response: {
         type: 'login',
-        message:
-          'NSA-GRADE SECURE LOGIN SEQUENCE INITIATED\n' +
-          'CREATE NEW ACCOUNT\n' +
-          'Password requirements:\n' +
-          '- Minimum 16 characters\n' +
-          '- Must include uppercase, lowercase, numbers, and special characters\n' +
-          '- Cannot contain dictionary words or common patterns\n' +
-          'Enter new password:'
+        message: 'NSA-GRADE SECURE LOGIN SEQUENCE INITIATED\n' +
+                 'Enter new password:\n' +
+                 '- Min 16 chars, upper/lower/number/symbol\n'
       }
     });
   }
 
-  // 🧹 After login success, normal commands allowed
+  // 🔐 Handle password submission SECOND
+  if (state.awaitingPassword) {
+    const accepted = (
+      input.length >= 16 &&
+      /[a-z]/.test(input) &&
+      /[A-Z]/.test(input) &&
+      /[0-9]/.test(input) &&
+      /[^A-Za-z0-9]/.test(input)
+    );
+
+    state.awaitingPassword = false;
+    input = ''.padEnd(128, '\0'); // scrub
+    input = null;
+
+    return res.json({
+      response: {
+        type: accepted ? 'login' : 'error',
+        message: accepted
+          ? '✅ PASSWORD ACCEPTED\nACCESS GRANTED.'
+          : '❌ PASSWORD REJECTED\nMust meet NSA standards.\nTry again:'
+      }
+    });
+  }
+
+  // 🧭 Normal command routing
   try {
-    const output = processCommand(input);
+    const output = processCommand(command);
     res.json({ response: output });
   } catch (err) {
-    console.error(`Command error: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 });
 
-
-function validatePassword(pwd) {
-  return (
-    pwd.length >= 16 && /[a-z]/.test(pwd) && /[A-Z]/.test(pwd) && /[0-9]/.test(pwd) && /[^A-Za-z0-9]/.test(pwd)
-  );
-}
 
 function processCommand(input) {
   const [cmd, ...args] = input.trim().split(' ');
@@ -151,6 +134,7 @@ function processCommand(input) {
       }
     }
   };
+
   return commands[cmd] ? commands[cmd]() : { type: 'error', message: 'Unknown command. Type "help" for a list.' };
 }
 
