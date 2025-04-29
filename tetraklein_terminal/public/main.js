@@ -44,23 +44,20 @@
 
   const handleCommand = async (cmd) => {
     if (awaitingPassword && cmd.toLowerCase() !== 'login') {
-  appendLine('🔐 [Password submitted]');
-} else {
-  appendLine(`> ${cmd}`);
-}
-
+      appendLine('🔐 [Password submitted]');
+    } else {
+      appendLine(`> ${cmd}`);
+    }
 
     try {
       const res = await fetch('/command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-  command: cmd,
-  sessionId: sid,
-  isPassword: awaitingPassword && !authenticated
-})
-
-
+          command: cmd,
+          sessionId: sid,
+          isPassword: awaitingPassword && !authenticated
+        })
       });
 
       const json = await res.json();
