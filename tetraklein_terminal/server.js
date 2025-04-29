@@ -51,7 +51,7 @@ app.post('/command', (req, res) => {
   }
 
   // Handle password input
-  if (state.awaitingPassword || req.body.isPassword) {
+  if (state.awaitingPassword && req.body.isPassword) {
     const accepted = (
       input.length >= 16 &&
       /[a-z]/.test(input) &&

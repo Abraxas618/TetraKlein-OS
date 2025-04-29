@@ -57,7 +57,7 @@
         body: JSON.stringify({
   command: cmd,
   sessionId: sid,
-  isPassword: awaitingPassword
+  isPassword: awaitingPassword && !authenticated
 })
 
       });
