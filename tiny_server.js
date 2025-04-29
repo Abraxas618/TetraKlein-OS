@@ -20,7 +20,17 @@ body { background:#000; color:#f00; font-family:monospace; display:flex; align-i
 <body><div class="terminal"><h1>ACCESS DENIED</h1><p>SECURITY VIOLATION DETECTED</p><p>LOCALHOST CONNECTIONS ONLY</p><p class="blink">INCIDENT LOGGED</p></div></body></html>`;
 
 // Middleware: security headers and gzip
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:"]
+    }
+  }
+}));
+
 app.use(compression());
 
 // 🔐 Allowlist for bridge/NAT IPs

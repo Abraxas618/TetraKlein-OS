@@ -6,84 +6,74 @@ echo "=========================================="
 echo "COLD WAR FIELD DEPLOYMENT SCENARIO"
 echo
 
-# Detect OS
 OS="$(uname -s)"
 CONTAINER_ENGINE=""
 
-# Detect container engine
 check_container_engine() {
     if command -v podman &> /dev/null; then
         CONTAINER_ENGINE="podman"
-        echo "✅ Using Podman as container engine"
+        echo "✅ Using Podman"
     elif command -v docker &> /dev/null; then
         CONTAINER_ENGINE="docker"
-        echo "✅ Using Docker as container engine (fallback)"
+        echo "✅ Using Docker (fallback)"
     else
-        echo "❌ ERROR: Neither Podman nor Docker found."
+        echo "❌ ERROR: No container engine found."
         exit 1
     fi
 }
 
-# Purge any old container
 purge_old_container() {
     if $CONTAINER_ENGINE ps -a --format '{{.Names}}' | grep -q '^tetraklein-os$'; then
-        echo "⚡ Removing existing container tetraklein-os..."
+        echo "⚡ Removing old container..."
         $CONTAINER_ENGINE rm -f tetraklein-os
     fi
 }
 
-# Check if port 8080 is available
 check_port_8080() {
-    echo "🔍 Checking if port 8080 is available..."
-    if [ "$OS" = "Linux" ] || [ "$OS" = "Darwin" ]; then
-        if lsof -i :8080 &> /dev/null; then
-            echo "❌ ERROR: Port 8080 is already in use. Please free it before deployment."
+    echo "🔍 Checking if port 8080 is free..."
+
+    if command -v lsof &>/dev/null; then
+        if lsof -i :8080 &>/dev/null; then
+            echo "❌ Port 8080 is in use. Please free it or stop the service."
             exit 1
+        else
+            echo "✅ Port 8080 is available"
         fi
-    elif [[ "$OS" == *"MINGW"* ]] || [[ "$OS" == *"MSYS"* ]] || [[ "$OS" == "CYGWIN"* ]]; then
-        netstat -ano | grep -q ":8080 " && {
-            echo "❌ ERROR: Port 8080 is already in use. Please free it before deployment."
-            exit 1
-        }
+    else
+        echo "⚠️ lsof not found. Skipping port check. Please make sure port 8080 is free manually."
     fi
 }
 
-# Prepare environment
 prepare_environment() {
     mkdir -p vault
     chmod 777 vault
     mkdir -p tetraklein_archive
 }
 
-# Create archive snapshot
 create_archive() {
-    echo "⚡ Building TetraKlein-OS archive..."
-    if [ "$OS" = "Linux" ] || [ "$OS" = "Darwin" ]; then
+    echo "📦 Creating archive snapshot..."
+    if [[ "$OS" == "Linux" || "$OS" == "Darwin" ]]; then
         tar -czf tetraklein_archive/tetraklein-os.tar.gz \
-            Containerfile deploy.sh tiny_server.js public vault README.md .dockerignore
+            Containerfile deploy.sh tiny_server.js tetraklein_terminal/public vault README.md .dockerignore
     else
         if command -v powershell &> /dev/null; then
-            powershell -Command "Compress-Archive -Path Containerfile,deploy.sh,tiny_server.js,public,vault,README.md,.dockerignore -DestinationPath tetraklein_archive/tetraklein-os.zip -Force"
+            powershell -Command "Compress-Archive -Path Containerfile,deploy.sh,tiny_server.js,tetraklein_terminal/public,vault,README.md,.dockerignore -DestinationPath tetraklein_archive/tetraklein-os.zip -Force"
         else
-            echo "⚠️ Warning: Could not create archive (powershell not available)"
+            echo "⚠️ Could not archive (PowerShell not found)"
         fi
     fi
 }
 
-# Build container image
 build_container() {
-    echo "⚡ Building TetraKlein-OS Field Terminal container..."
+    echo "⚡ Building container..."
     $CONTAINER_ENGINE build -t tetraklein-os .
 }
 
-# Run container
 run_container() {
-    echo "⚡ Launching TetraKlein-OS Field Terminal on port 8080..."
+    echo "🚀 Launching TetraKlein-OS on port 8080..."
 
     SHARED_FLAG="Z"
-    if [ "$CONTAINER_ENGINE" = "docker" ]; then
-        SHARED_FLAG=""
-    fi
+    [ "$CONTAINER_ENGINE" = "docker" ] && SHARED_FLAG=""
 
     $CONTAINER_ENGINE run -d \
         --name tetraklein-os \
@@ -95,21 +85,17 @@ run_container() {
     sleep 2
 
     if $CONTAINER_ENGINE ps | grep -q tetraklein-os; then
-        echo
-        echo "✅ TetraKlein-OS Field Terminal deployed successfully."
-        echo "Access via: http://127.0.0.1:8080"
-        echo "Admin access: http://127.0.0.1:8080/admin"
-        echo
-        echo "CLASSIFIED: DESTROY AFTER MISSION COMPLETE"
-        echo "Container will self-destroy when stopped."
+        echo "✅ Deployment successful"
+        echo "GUI: http://127.0.0.1:8080"
+        echo "Admin: http://127.0.0.1:8080/admin"
+        echo "CLASSIFIED: TERMINAL WILL SELF-DESTRUCT WHEN STOPPED"
     else
-        echo "❌ ERROR: Container failed to start. Checking logs:"
+        echo "❌ Deployment failed"
         $CONTAINER_ENGINE logs tetraklein-os
         exit 1
     fi
 }
 
-# MAIN EXECUTION
 check_container_engine
 purge_old_container
 check_port_8080

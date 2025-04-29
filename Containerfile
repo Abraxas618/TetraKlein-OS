@@ -9,7 +9,7 @@ WORKDIR /app
 # Copy application files
 COPY tiny_server.js .
 COPY deploy.sh .
-COPY public/ ./public/
+COPY tetraklein_terminal/public/ ./public/
 COPY .dockerignore .
 COPY README.md .
 
