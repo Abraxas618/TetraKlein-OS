@@ -43,11 +43,12 @@
   };
 
   const handleCommand = async (cmd) => {
-    if (awaitingPassword) {
-      appendLine('🔐 [Password submitted]');
-    } else {
-      appendLine(`> ${cmd}`);
-    }
+    if (awaitingPassword && cmd.toLowerCase() !== 'login') {
+  appendLine('🔐 [Password submitted]');
+} else {
+  appendLine(`> ${cmd}`);
+}
+
 
     try {
       const res = await fetch('/command', {
