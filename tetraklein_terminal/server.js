@@ -51,7 +51,7 @@ app.post('/command', (req, res) => {
   }
 
   // Handle password input
-  if (state.awaitingPassword) {
+  if (state.awaitingPassword || req.body.isPassword) {
     const accepted = (
       input.length >= 16 &&
       /[a-z]/.test(input) &&
@@ -80,7 +80,7 @@ app.post('/command', (req, res) => {
     return res.json({
       response: {
         type: 'error',
-        message: '⚠️ ACCESS DENIED. Please type "login" and authenticate first.'
+        message: ⚠️ ACCESS DENIED. Please type "login" and authenticate first.'
       }
     });
   }

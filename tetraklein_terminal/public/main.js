@@ -54,7 +54,12 @@
       const res = await fetch('/command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: cmd, sessionId: sid })
+        body: JSON.stringify({
+  command: cmd,
+  sessionId: sid,
+  isPassword: awaitingPassword
+})
+
       });
 
       const json = await res.json();
