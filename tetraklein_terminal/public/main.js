@@ -6,7 +6,6 @@
   sessionStorage.setItem('sid', sid);
 
   let awaitingPassword = false;
-  let lastCmd = '';
 
   const appendLine = (text = '', cls = '') => {
     const div = document.createElement('div');
@@ -19,35 +18,29 @@
   const appendResponse = (resp) => {
     if (resp.redirect) {
       window.location.href = resp.redirect;
-      return;
-    }
-
-    if (resp.message) {
+    } else if (resp.message) {
       const lines = resp.message.split('\n');
       lines.forEach(line => appendLine(line));
 
-      const msgLower = resp.message.toLowerCase();
-
-      if (msgLower.includes('enter your password')) {
+      // Automatically detect login prompts
+      if (resp.message.toLowerCase().includes('enter new password') ||
+          resp.message.toLowerCase().includes('enter your password')) {
         awaitingPassword = true;
       }
 
-      if (msgLower.includes('access granted')) {
+      if (resp.message.toLowerCase().includes('access granted')) {
         sessionStorage.setItem('authenticated', 'true');
         awaitingPassword = false;
-      }
-
-      if (msgLower.includes('access denied') || msgLower.includes('password rejected')) {
-        awaitingPassword = true;
       }
     }
   };
 
   const handleCommand = async (cmd) => {
-    if (awaitingPassword && cmd === lastCmd) return;
-    lastCmd = cmd;
-
-    appendLine(`> ${awaitingPassword ? '[PASSWORD]' : cmd}`);
+    if (!awaitingPassword) {
+      appendLine(`> ${cmd}`);
+    } else {
+      appendLine('> [PASSWORD]');
+    }
 
     try {
       const res = await fetch('/command', {
@@ -55,7 +48,6 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ command: cmd, sessionId: sid })
       });
-
       const json = await res.json();
       appendResponse(json.response);
     } catch (err) {
@@ -71,7 +63,7 @@
     }
   });
 
-  // Welcome banner
+  // Boot Message
   appendLine('TetraKlein-OS Secure Field Terminal');
   appendLine('-----------------------------------');
   appendLine("Type 'help' to view commands.");
