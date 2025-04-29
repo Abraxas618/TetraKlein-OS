@@ -1,3 +1,4 @@
+// Secure TetraKlein-OS Server
 const express = require('express');
 const https = require('https');
 const fs = require('fs');
@@ -8,13 +9,13 @@ const WebSocket = require('ws');
 const app = express();
 const PORT = 8080;
 
-// Session state
+// Session memory (in RAM only)
 const userState = {};
 
-// Trust localhost variants
+// Allow only these localhost IPs
 const trustedIPs = ['127.0.0.1', '::1', '::ffff:127.0.0.1', '10.0.2.100'];
 
-// Middleware: enforce localhost access only
+// Security middleware
 app.use((req, res, next) => {
   const ip = req.ip || req.connection.remoteAddress;
   if (!trustedIPs.includes(ip)) {
@@ -23,13 +24,11 @@ app.use((req, res, next) => {
   next();
 });
 
-// Parse JSON
+// Middleware
 app.use(express.json());
-
-// Serve frontend
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Commands
+// Command handling
 app.post('/command', (req, res) => {
   const { command, sessionId = 'default' } = req.body;
   if (!command) return res.status(400).json({ error: 'Command required' });
@@ -41,7 +40,7 @@ app.post('/command', (req, res) => {
 
   const state = userState[sessionId];
 
-  // 🔐 If typing "login"
+  // Handle login initiation
   if (input.toLowerCase() === 'login') {
     state.awaitingPassword = true;
     return res.json({
@@ -49,7 +48,7 @@ app.post('/command', (req, res) => {
     });
   }
 
-  // 🔐 If awaiting password
+  // Handle password input
   if (state.awaitingPassword) {
     const accepted = (
       input.length >= 16 &&
@@ -59,8 +58,8 @@ app.post('/command', (req, res) => {
       /[^A-Za-z0-9]/.test(input)
     );
 
-    state.awaitingPassword = false;
-    input = ''.padEnd(128, '\0');
+    state.awaitingPassword = false; // Reset password phase
+    input = ''.padEnd(128, '\0');    // Scrub password
     input = null;
 
     return res.json({
@@ -73,24 +72,23 @@ app.post('/command', (req, res) => {
     });
   }
 
-  // 🧭 ONLY after login success, now process normal commands
-try {
-  const output = processCommand(input);  // ✅ THIS LINE FIXED
-  res.json({ response: output });
-} catch (err) {
-  res.status(500).json({ error: err.message });
-}
-
+  // Normal command processing
+  try {
+    const output = processCommand(input);
+    res.json({ response: output });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-
+// Command processor
 function processCommand(input) {
   const [cmd, ...args] = input.trim().split(' ');
   const arg = args.join(' ');
 
   const commands = {
     help: () => ({ type: 'help', message: `Commands: help, login, status, time, clear, echo [msg]` }),
-    status: () => ({ type: 'status', message: 'SYSTEM: OK\nSECURE MODE ACTIVE' }),
+    status: () => ({ type: 'status', message: 'SYSTEM STATUS: OPERATIONAL\nMODE: SECURE' }),
     time: () => ({ type: 'time', message: new Date().toLocaleString() }),
     clear: () => ({ type: 'clear', message: '' }),
     echo: () => ({ type: 'echo', message: arg }),
@@ -99,7 +97,7 @@ function processCommand(input) {
   return commands[cmd] ? commands[cmd]() : { type: 'error', message: 'Unknown command. Type "help".' };
 }
 
-// WebSocket Secure Server
+// Self-signed cert for localhost HTTPS
 const cert = crypto.generateKeyPairSync('rsa', {
   modulusLength: 2048,
   publicKeyEncoding: { type: 'spki', format: 'pem' },
@@ -111,12 +109,14 @@ const server = https.createServer({
   cert: cert.publicKey
 }, app);
 
+// WebSocket Server
 const wss = new WebSocket.Server({ server });
 
 wss.on('connection', (ws) => {
   ws.send(JSON.stringify({ type: 'connected', msg: 'Welcome to TetraKlein Secure Mesh' }));
 });
 
+// Launch server
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`🛰️ TetraKlein OS running at https://127.0.0.1:${PORT}`);
+  console.log(`🛰️ TetraKlein OS is live at https://127.0.0.1:${PORT}`);
 });
