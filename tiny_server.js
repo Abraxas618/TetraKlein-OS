@@ -1,4 +1,3 @@
-// Secure TetraKlein-OS Field Terminal Server
 const express = require('express');
 const path = require('path');
 const helmet = require('helmet');
@@ -10,12 +9,13 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 const userState = {}; // In-memory session state
 
-const securityErrorPage = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Access Denied</title><style>
+const securityErrorPage = `
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Access Denied</title><style>
 body{background:#000;color:#f00;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;}
 .terminal{border:2px solid #f00;padding:30px;text-align:center;box-shadow:0 0 12px #f00;}
 .blink{animation:blink 1s step-end infinite;}
-@keyframes blink{0%,50%{opacity:1;}51%,100%{opacity:0;}}
-</style></head><body><div class="terminal"><h1>ACCESS DENIED</h1><p>SECURITY VIOLATION DETECTED</p><p>LOCALHOST CONNECTIONS ONLY</p><p class="blink">INCIDENT LOGGED</p></div></body></html>`;
+@keyframes blink{0%,50%{opacity:1;}51%,100%{opacity:0;}}</style></head>
+<body><div class="terminal"><h1>ACCESS DENIED</h1><p>SECURITY VIOLATION DETECTED</p><p>LOCALHOST CONNECTIONS ONLY</p><p class="blink">INCIDENT LOGGED</p></div></body></html>`;
 
 // Middleware
 app.use(helmet({
@@ -59,25 +59,26 @@ app.post('/command', (req, res) => {
 
   let input = command.trim();
   if (!userState[sessionId]) {
-    userState[sessionId] = { awaitingPassword: false };
+    userState[sessionId] = {
+      awaitingPassword: false,
+      authenticated: false
+    };
   }
 
   const state = userState[sessionId];
 
-  // 🔐 Handle login initiation FIRST
+  // 🔑 Initiate login sequence
   if (input.toLowerCase() === 'login') {
     state.awaitingPassword = true;
     return res.json({
       response: {
         type: 'login',
-        message: 'NSA-GRADE SECURE LOGIN SEQUENCE INITIATED\n' +
-                 'Enter new password:\n' +
-                 '- Min 16 chars, upper/lower/number/symbol\n'
+        message: 'NSA-GRADE SECURE LOGIN SEQUENCE INITIATED\nEnter new password:\n- Min 16 chars, uppercase/lowercase/number/symbol'
       }
     });
   }
 
-  // 🔐 Handle password submission SECOND
+  // 🔐 Awaiting password input
   if (state.awaitingPassword) {
     const accepted = (
       input.length >= 16 &&
@@ -88,7 +89,9 @@ app.post('/command', (req, res) => {
     );
 
     state.awaitingPassword = false;
-    input = ''.padEnd(128, '\0'); // scrub
+    state.authenticated = accepted;
+
+    input = ''.padEnd(128, '\0');
     input = null;
 
     return res.json({
@@ -97,6 +100,16 @@ app.post('/command', (req, res) => {
         message: accepted
           ? '✅ PASSWORD ACCEPTED\nACCESS GRANTED.'
           : '❌ PASSWORD REJECTED\nMust meet NSA standards.\nTry again:'
+      }
+    });
+  }
+
+  // ❌ Gate all non-login commands behind auth
+  if (!state.authenticated) {
+    return res.json({
+      response: {
+        type: 'error',
+        message: '❌ UNAUTHORIZED. Please type "login" to authenticate.'
       }
     });
   }
@@ -110,7 +123,7 @@ app.post('/command', (req, res) => {
   }
 });
 
-
+// Local command processor
 function processCommand(input) {
   const [cmd, ...args] = input.trim().split(' ');
   const arg = args.join(' ');
@@ -135,7 +148,7 @@ function processCommand(input) {
     }
   };
 
-  return commands[cmd] ? commands[cmd]() : { type: 'error', message: 'Unknown command. Type "help" for a list.' };
+  return commands[cmd] ? commands[cmd]() : { type: 'error', message: 'Unknown command. Type "help".' };
 }
 
 app.get('/health', (req, res) => res.status(200).json({ status: 'operational' }));
