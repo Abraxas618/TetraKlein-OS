@@ -74,12 +74,13 @@ app.post('/command', (req, res) => {
   }
 
   // 🧭 ONLY after login success, now process normal commands
-  try {
-    const output = processCommand(command);
-    res.json({ response: output });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+try {
+  const output = processCommand(input);  // ✅ THIS LINE FIXED
+  res.json({ response: output });
+} catch (err) {
+  res.status(500).json({ error: err.message });
+}
+
 });
 
 
