@@ -14,30 +14,31 @@
     terminal.scrollTop = terminal.scrollHeight;
   };
 
-  const handleResponse = (resp) => {
+  const appendResponse = (resp) => {
     if (resp.redirect) {
       window.location.href = resp.redirect;
     } else if (resp.message) {
       const lines = resp.message.split('\n');
       lines.forEach(line => appendLine(line));
+    }
 
-      if (resp.type === 'login') {
-        if (resp.message.toLowerCase().includes('enter new password') || resp.message.toLowerCase().includes('enter password')) {
-          awaitingPassword = true;
-        }
-        if (resp.message.toLowerCase().includes('access granted')) {
-          awaitingPassword = false;
-        }
-      }
+    if (resp.message?.toLowerCase().includes('enter new password')) {
+      awaitingPassword = true;
+    }
+
+    if (resp.message?.toLowerCase().includes('access granted')) {
+      awaitingPassword = false;
+      sessionStorage.setItem('authenticated', 'true');
+    }
+
+    if (resp.message?.toLowerCase().includes('try again')) {
+      awaitingPassword = true;
     }
   };
 
   const handleCommand = async (cmd) => {
-    if (!awaitingPassword) {
-      appendLine(`> ${cmd}`);
-    } else {
-      appendLine(`> [PASSWORD ENTERED]`);
-    }
+    if (!awaitingPassword) appendLine(`> ${cmd}`);
+    else appendLine(`> [password hidden]`);
 
     try {
       const res = await fetch('/command', {
@@ -46,13 +47,13 @@
         body: JSON.stringify({ command: cmd, sessionId: sid })
       });
       const json = await res.json();
-      handleResponse(json.response);
+      appendResponse(json.response);
     } catch (err) {
       appendLine(`ERROR: ${err.message}`, 'error');
     }
   };
 
-  inputField.addEventListener('keydown', (e) => {
+  inputField.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
       const cmd = inputField.value.trim();
       inputField.value = '';
