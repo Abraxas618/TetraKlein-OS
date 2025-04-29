@@ -41,53 +41,47 @@ app.post('/command', (req, res) => {
 
   const state = userState[sessionId];
 
-  // 🔐 Handle LOGIN command first
+  // 🔐 If typing "login"
   if (input.toLowerCase() === 'login') {
     state.awaitingPassword = true;
     return res.json({
+      response: { type: 'login', message: 'NSA-GRADE SECURE LOGIN INITIATED\nEnter new password:' }
+    });
+  }
+
+  // 🔐 If awaiting password
+  if (state.awaitingPassword) {
+    const accepted = (
+      input.length >= 16 &&
+      /[a-z]/.test(input) &&
+      /[A-Z]/.test(input) &&
+      /[0-9]/.test(input) &&
+      /[^A-Za-z0-9]/.test(input)
+    );
+
+    state.awaitingPassword = false;
+    input = ''.padEnd(128, '\0');
+    input = null;
+
+    return res.json({
       response: {
-        type: 'login',
-        message: 'NSA-GRADE SECURE LOGIN INITIATED\nEnter new password:'
+        type: accepted ? 'login' : 'error',
+        message: accepted
+          ? '✅ PASSWORD ACCEPTED\nACCESS GRANTED.'
+          : '❌ PASSWORD REJECTED\nMust meet NSA standards.\nTry again:'
       }
     });
   }
 
-  // 🔐 Handle PASSWORD entry if awaitingPassword = true
-  if (state.awaitingPassword) {
-  const accepted = (
-    input.length >= 16 &&
-    /[a-z]/.test(input) &&
-    /[A-Z]/.test(input) &&
-    /[0-9]/.test(input) &&
-    /[^A-Za-z0-9]/.test(input)
-  );
-
-  if (accepted) {
-    state.awaitingPassword = false;
-  }
-
-  input = ''.padEnd(128, '\0');
-  input = null;
-
-  return res.json({
-    response: {
-      type: accepted ? 'login' : 'error',
-      message: accepted
-        ? '✅ PASSWORD ACCEPTED\nACCESS GRANTED.'
-        : '❌ PASSWORD REJECTED\nMust meet NSA standards.\nTry again:'
-    }
-  });
-}
-
-
-  // 🧭 ONLY after successful login, process normal commands
+  // 🧭 ONLY after login success, now process normal commands
   try {
-    const output = processCommand(command); // use command (original), not input
+    const output = processCommand(command);
     res.json({ response: output });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 function processCommand(input) {
   const [cmd, ...args] = input.trim().split(' ');
