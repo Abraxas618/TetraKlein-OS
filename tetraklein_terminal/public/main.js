@@ -20,25 +20,23 @@
     } else if (resp.message) {
       const lines = resp.message.split('\n');
       lines.forEach(line => appendLine(line));
-    }
 
-    if (resp.message?.toLowerCase().includes('enter new password')) {
-      awaitingPassword = true;
-    }
+      if (resp.message.includes('Enter password')) {
+        awaitingPassword = true;
+      }
 
-    if (resp.message?.toLowerCase().includes('access granted')) {
-      awaitingPassword = false;
-      sessionStorage.setItem('authenticated', 'true');
-    }
-
-    if (resp.message?.toLowerCase().includes('try again')) {
-      awaitingPassword = true;
+      if (resp.message.includes('ACCESS GRANTED')) {
+        awaitingPassword = false;
+      }
     }
   };
 
   const handleCommand = async (cmd) => {
-    if (!awaitingPassword) appendLine(`> ${cmd}`);
-    else appendLine(`> [password hidden]`);
+    if (!awaitingPassword || cmd.toLowerCase() === 'login') {
+      appendLine(`> ${cmd}`);
+    } else {
+      appendLine('🔐 [Password submitted]');
+    }
 
     try {
       const res = await fetch('/command', {
@@ -53,7 +51,7 @@
     }
   };
 
-  inputField.addEventListener('keydown', e => {
+  inputField.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const cmd = inputField.value.trim();
       inputField.value = '';
