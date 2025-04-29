@@ -43,9 +43,7 @@
   };
 
   const handleCommand = async (cmd) => {
-    const isLogin = cmd.toLowerCase() === 'login';
-
-    if (awaitingPassword && !isLogin) {
+    if (awaitingPassword) {
       appendLine('🔐 [Password submitted]');
     } else {
       appendLine(`> ${cmd}`);
