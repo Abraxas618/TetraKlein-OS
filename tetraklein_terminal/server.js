@@ -35,45 +35,57 @@ app.post('/command', (req, res) => {
   if (!command) return res.status(400).json({ error: 'Command required' });
 
   let input = command.trim();
-  userState[sessionId] = userState[sessionId] || { awaitingPassword: false };
+  if (!userState[sessionId]) {
+    userState[sessionId] = { awaitingPassword: false };
+  }
+
   const state = userState[sessionId];
 
-  // Handle login initiation
+  // 🔐 Handle LOGIN command first
   if (input.toLowerCase() === 'login') {
     state.awaitingPassword = true;
     return res.json({
       response: {
         type: 'login',
-        message: 'SECURE LOGIN INITIATED\nEnter NSA-grade password:'
+        message: 'NSA-GRADE SECURE LOGIN INITIATED\nEnter new password:'
       }
     });
   }
 
-  // Handle password input
+  // 🔐 Handle PASSWORD entry if awaitingPassword = true
   if (state.awaitingPassword) {
-    state.awaitingPassword = false;
-    const valid = (
-      input.length >= 16 &&
-      /[a-z]/.test(input) &&
-      /[A-Z]/.test(input) &&
-      /[0-9]/.test(input) &&
-      /[^A-Za-z0-9]/.test(input)
-    );
-    input = null;
+  const accepted = (
+    input.length >= 16 &&
+    /[a-z]/.test(input) &&
+    /[A-Z]/.test(input) &&
+    /[0-9]/.test(input) &&
+    /[^A-Za-z0-9]/.test(input)
+  );
 
-    return res.json({
-      response: {
-        type: valid ? 'login' : 'error',
-        message: valid ? '✅ PASSWORD ACCEPTED\nACCESS GRANTED.' : '❌ PASSWORD REJECTED\nTry again.'
-      }
-    });
+  if (accepted) {
+    state.awaitingPassword = false;
   }
 
+  input = ''.padEnd(128, '\0');
+  input = null;
+
+  return res.json({
+    response: {
+      type: accepted ? 'login' : 'error',
+      message: accepted
+        ? '✅ PASSWORD ACCEPTED\nACCESS GRANTED.'
+        : '❌ PASSWORD REJECTED\nMust meet NSA standards.\nTry again:'
+    }
+  });
+}
+
+
+  // 🧭 ONLY after successful login, process normal commands
   try {
-    const output = processCommand(input);
+    const output = processCommand(command); // use command (original), not input
     res.json({ response: output });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
