@@ -87,7 +87,7 @@ app.post('/command', (req, res) => {
 
   // Process command
   try {
-    const output = processCommand(input);
+    const output = processCommand(command);
     res.json({ response: output });
   } catch (err) {
     res.status(500).json({ error: err.message });
