@@ -50,8 +50,8 @@ app.post('/command', (req, res) => {
     });
   }
 
-  // Handle password input
-  if (state.awaitingPassword && req.body.isPassword) {
+  // Password handling now exact
+if (state.awaitingPassword && req.body.isPassword) {
     const accepted = (
       input.length >= 16 &&
       /[a-z]/.test(input) &&
@@ -65,6 +65,8 @@ app.post('/command', (req, res) => {
     input = ''.padEnd(128, '\0');
     input = null;
 
+    console.log(`[LOGIN] Session ${sessionId} Authenticated: ${accepted}`);
+
     return res.json({
       response: {
         type: accepted ? 'login' : 'error',
@@ -73,17 +75,17 @@ app.post('/command', (req, res) => {
           : '❌ PASSWORD REJECTED\nMust meet NSA standards.\nTry again:'
       }
     });
-  }
+}
 
-  // Require login before accessing commands
-  if (!state.authenticated) {
+// Normal command access needs to be gated
+if (!state.authenticated) {
     return res.json({
       response: {
         type: 'error',
-        message: ⚠️ ACCESS DENIED. Please type "login" and authenticate first.'
+        message: '❌ ACCESS DENIED. Please type "login" first.'
       }
     });
-  }
+}
 
   // Process command
   try {
