@@ -21,11 +21,12 @@
       const lines = resp.message.split('\n');
       lines.forEach(line => appendLine(line));
 
-      if (resp.message.includes('Enter password')) {
+      const normalized = resp.message.toLowerCase();
+      if (normalized.includes('enter new password') || normalized.includes('enter password')) {
         awaitingPassword = true;
       }
 
-      if (resp.message.includes('ACCESS GRANTED')) {
+      if (normalized.includes('access granted')) {
         awaitingPassword = false;
       }
     }
@@ -44,6 +45,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ command: cmd, sessionId: sid })
       });
+
       const json = await res.json();
       appendResponse(json.response);
     } catch (err) {
