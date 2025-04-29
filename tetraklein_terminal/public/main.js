@@ -1,7 +1,6 @@
 (() => {
   const terminal = document.querySelector('#terminal');
   const inputField = document.querySelector('#input');
-  const prompt = document.querySelector('#prompt');
   const sid = sessionStorage.getItem('sid') || crypto.randomUUID();
   sessionStorage.setItem('sid', sid);
 
@@ -15,22 +14,20 @@
     terminal.scrollTop = terminal.scrollHeight;
   };
 
-  const appendResponse = (resp) => {
+  const handleResponse = (resp) => {
     if (resp.redirect) {
       window.location.href = resp.redirect;
     } else if (resp.message) {
       const lines = resp.message.split('\n');
       lines.forEach(line => appendLine(line));
 
-      // Automatically detect login prompts
-      if (resp.message.toLowerCase().includes('enter new password') ||
-          resp.message.toLowerCase().includes('enter your password')) {
-        awaitingPassword = true;
-      }
-
-      if (resp.message.toLowerCase().includes('access granted')) {
-        sessionStorage.setItem('authenticated', 'true');
-        awaitingPassword = false;
+      if (resp.type === 'login') {
+        if (resp.message.toLowerCase().includes('enter new password') || resp.message.toLowerCase().includes('enter password')) {
+          awaitingPassword = true;
+        }
+        if (resp.message.toLowerCase().includes('access granted')) {
+          awaitingPassword = false;
+        }
       }
     }
   };
@@ -39,7 +36,7 @@
     if (!awaitingPassword) {
       appendLine(`> ${cmd}`);
     } else {
-      appendLine('> [PASSWORD]');
+      appendLine(`> [PASSWORD ENTERED]`);
     }
 
     try {
@@ -49,13 +46,13 @@
         body: JSON.stringify({ command: cmd, sessionId: sid })
       });
       const json = await res.json();
-      appendResponse(json.response);
+      handleResponse(json.response);
     } catch (err) {
       appendLine(`ERROR: ${err.message}`, 'error');
     }
   };
 
-  inputField.addEventListener('keydown', e => {
+  inputField.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const cmd = inputField.value.trim();
       inputField.value = '';
@@ -63,8 +60,7 @@
     }
   });
 
-  // Boot Message
   appendLine('TetraKlein-OS Secure Field Terminal');
   appendLine('-----------------------------------');
-  appendLine("Type 'help' to view commands.");
+  appendLine('Type "help" to view available commands.');
 })();
