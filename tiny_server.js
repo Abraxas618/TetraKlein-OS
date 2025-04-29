@@ -103,7 +103,7 @@ app.post('/command', (req, res) => {
 
   // 🧭 Normal command routing
   try {
-    const output = processCommand(command);
+    const output = processCommand(input);
     res.json({ response: output });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -5,6 +5,7 @@
   sessionStorage.setItem('sid', sid);
 
   let awaitingPassword = false;
+  let authenticated = false;
 
   const appendLine = (text = '', cls = '') => {
     const div = document.createElement('div');
@@ -17,26 +18,37 @@
   const appendResponse = (resp) => {
     if (resp.redirect) {
       window.location.href = resp.redirect;
-    } else if (resp.message) {
+      return;
+    }
+
+    if (resp.message) {
       const lines = resp.message.split('\n');
       lines.forEach(line => appendLine(line));
 
-      const normalized = resp.message.toLowerCase();
-      if (normalized.includes('enter new password') || normalized.includes('enter password')) {
+      const msg = resp.message.toLowerCase();
+
+      if (msg.includes('enter new password') || msg.includes('enter password')) {
         awaitingPassword = true;
       }
 
-      if (normalized.includes('access granted')) {
+      if (msg.includes('access granted')) {
         awaitingPassword = false;
+        authenticated = true;
+      }
+
+      if (msg.includes('access denied') || msg.includes('rejected')) {
+        authenticated = false;
       }
     }
   };
 
   const handleCommand = async (cmd) => {
-    if (!awaitingPassword || cmd.toLowerCase() === 'login') {
-      appendLine(`> ${cmd}`);
-    } else {
+    const isLogin = cmd.toLowerCase() === 'login';
+
+    if (awaitingPassword && !isLogin) {
       appendLine('🔐 [Password submitted]');
+    } else {
+      appendLine(`> ${cmd}`);
     }
 
     try {
@@ -47,7 +59,7 @@
       });
 
       const json = await res.json();
-      appendResponse(json.response);
+      appendResponse(json.response || { type: 'error', message: 'Invalid response' });
     } catch (err) {
       appendLine(`ERROR: ${err.message}`, 'error');
     }
